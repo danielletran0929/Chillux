@@ -4,7 +4,7 @@ export default StyleSheet.create({
   pageContainer: {
     flex: 1,
     backgroundColor: '#eef2f5',
-    paddingHorizontal: 10,
+    paddingHorizontal: 10
   },
 
   header: {
@@ -14,67 +14,43 @@ export default StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 50,
+    marginTop: 50
   },
   logo: {
     width: 40,
     height: 40,
-    resizeMode: 'contain',
+    resizeMode: 'contain'
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 6
   },
   usernameHeader: {
     color: '#fff',
     fontWeight: 'bold',
-    marginRight: 8,
+    marginRight: 8
   },
   logoutBtn: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     backgroundColor: '#fff',
-    borderRadius: 6,
+    borderRadius: 6
   },
   logoutText: {
-    fontSize: 16,
+    fontSize: 16
   },
 
-  newPost: {
-    backgroundColor: '#fff',
-    padding: 10,
-    marginVertical: 8,
-    width: '100%',
-    borderRadius: 8,
-  },
-  postInput: {
-    backgroundColor: '#eee',
-    padding: 10,
-    borderRadius: 6,
-    marginBottom: 6,
-  },
-  quickActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  circleBtn: {
-    width: 32,
-    height: 32,
-    backgroundColor: '#bbb',
-    borderRadius: 16,
-    marginRight: 6,
-  },
-  postButton: {
+  createPostBtn: {
     backgroundColor: '#0571d3',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderRadius: 6,
-    marginLeft: 'auto',
+    marginVertical: 10,
+    alignItems: 'center'
   },
-  postBtnText: {
-    color: 'white',
-    fontWeight: 'bold',
+  createPostText: {
+    color: '#fff',
+    fontWeight: 'bold'
   },
 
   postCard: {
@@ -84,45 +60,143 @@ export default StyleSheet.create({
     borderRadius: 10,
     width: '100%',
     borderBottomWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#ddd'
   },
   postHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 6
   },
-  userImg: {
+  userImgPlaceholder: {
     width: 40,
     height: 40,
     backgroundColor: '#aaa',
     borderRadius: 20,
-    marginRight: 10,
+    marginRight: 10
   },
   username: {
-    fontWeight: 'bold',
+    fontWeight: 'bold'
   },
   time: {
     color: '#555',
-    fontSize: 12,
+    fontSize: 12
   },
   postText: {
-    marginVertical: 8,
+    marginVertical: 8
   },
-  postImage: {
-    width: '100%',
-    height: 250,
-    backgroundColor: '#bbb',
-    borderRadius: 6,
-    marginTop: 10,
-  },
+
+  inlinePostImage: {
+  width: 150,
+  height: 150,
+  borderRadius: 10,
+  marginRight: 10,
+},
+imageContainer: {
+  marginVertical: 10,
+},
 
   actionsRow: {
     flexDirection: 'row',
     marginTop: 10,
-    justifyContent: 'space-around',
+    justifyContent: 'space-around'
   },
   actionText: {
     color: '#0571d3',
-    fontWeight: '500',
+    fontWeight: '500'
   },
+
+  reactionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 5
+  },
+  reactionCount: {
+    marginRight: 6,
+    fontSize: 16
+  },
+
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+
+  emojiPopup: {
+    backgroundColor: '#fff',
+    padding: 14,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  emojiPopupItem: {
+    marginHorizontal: 6
+  },
+  emojiPopupText: {
+    fontSize: 28
+  },
+  bigEmojiSheet: {
+  position: 'absolute',
+  bottom: 0,
+  width: '100%',
+  height: '50%', // takes half the screen
+  backgroundColor: '#fff',
+  borderTopLeftRadius: 20,
+  borderTopRightRadius: 20,
+  padding: 15
+},
+
+bigEmojiTitle: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  marginBottom: 10
+},
+
+bigEmojiItem: {
+  width: '16%',
+  aspectRatio: 1,
+  justifyContent: 'center',
+  alignItems: 'center'
+},
+
+bigEmojiText: {
+  fontSize: 30 // bigger emojis!
+},
+
+bigEmojiClose: {
+  width: '100%',
+  paddingVertical: 12,
+  alignItems: 'center',
+  backgroundColor: '#eee',
+  marginTop: 6,
+  borderRadius: 10
+},
+commentBox: {
+  backgroundColor: '#fff',
+  padding: 18,
+  borderRadius: 12,
+  width: '90%'
+},
+commentInput: {
+  borderWidth: 1,
+  borderColor: '#ccc',
+  borderRadius: 6,
+  padding: 10,
+  minHeight: 70,
+  marginVertical: 10
+},
+postCommentBtn: {
+  backgroundColor: '#0571d3',
+  paddingVertical: 8,
+  paddingHorizontal: 16,
+  borderRadius: 8
+},
+cancelCommentBtn: {
+  backgroundColor: '#ccc',
+  paddingVertical: 8,
+  paddingHorizontal: 16,
+  borderRadius: 8
+},
+
+
 });

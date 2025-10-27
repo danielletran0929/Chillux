@@ -9,21 +9,26 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
   const [password, setPassword] = useState('');
 
   const handleLogin = async () => {
-    const storedData = await AsyncStorage.getItem('userData');
-
-    if (!storedData) {
+    const stored = await AsyncStorage.getItem('users');
+    
+    if (!stored) {
       Alert.alert('Error', 'No user registered');
       return;
     }
 
-    const { email: savedEmail, password: savedPass } = JSON.parse(storedData);
+    const users = JSON.parse(stored);
+    const found = users.find(
+      u => u.email === email.trim() && u.password === password.trim()
+    );
 
-    if (email.trim() === savedEmail && password.trim() === savedPass) {
-      await AsyncStorage.setItem('isLoggedIn', 'true');
-      setLoggedIn(true);
-    } else {
+    if (!found) {
       Alert.alert('Error', 'Invalid credentials');
+      return;
     }
+
+    await AsyncStorage.setItem('currentUser', JSON.stringify(found));
+    await AsyncStorage.setItem('isLoggedIn', 'true');
+    setLoggedIn(true);
   };
 
   return (
@@ -35,10 +40,6 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
 
         <TextInput style={common.input} placeholder="Email" value={email} onChangeText={setEmail} autoCapitalize="none" />
         <TextInput style={common.input} placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
-        <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
-          <Text style={styles.forgot}>Forgot Password?</Text>
-        </TouchableOpacity>
-
 
         <TouchableOpacity style={common.button} onPress={handleLogin}>
           <Text style={common.buttonText}>Login</Text>

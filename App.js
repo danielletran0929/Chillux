@@ -8,6 +8,7 @@ import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import NewsFeed from './screens/NewsFeed';
 import ForgotPassword from './screens/ForgotPassword';
+import CreatePost from './screens/CreatePost';
 
 const Stack = createStackNavigator();
 
@@ -34,23 +35,28 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {loggedIn ? (
+  <NavigationContainer>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+
+      {loggedIn ? (
+        <>
           <Stack.Screen name="Home">
             {props => <NewsFeed {...props} setLoggedIn={setLoggedIn} />}
           </Stack.Screen>
-        ) : (
-          <>
-            <Stack.Screen name="Login">
-              {props => <LoginScreen {...props} setLoggedIn={setLoggedIn} />}
-            </Stack.Screen>
-            <Stack.Screen name="Register" component={RegisterScreen} />
-            <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
-          </>
+          <Stack.Screen name="CreatePost" component={CreatePost} />
+        </>
+      ) : (
+        <>
+          <Stack.Screen name="Login">
+            {props => <LoginScreen {...props} setLoggedIn={setLoggedIn} />}
+          </Stack.Screen>
+          <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
+        </>
+      )}
 
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
-  );
+    </Stack.Navigator>
+  </NavigationContainer>
+);
+
 }

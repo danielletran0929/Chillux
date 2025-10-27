@@ -15,20 +15,30 @@ export default function RegisterScreen({ navigation }) {
       Alert.alert('Error', 'All fields are required');
       return;
     }
-    
 
     if (password !== confirm) {
       Alert.alert('Error', 'Passwords do not match');
       return;
     }
 
-    await AsyncStorage.setItem(
-      'userData',
-      JSON.stringify({ email, username, password })
-    );
+    const existing = await AsyncStorage.getItem('users');
+    let users = existing ? JSON.parse(existing) : [];
 
-    await AsyncStorage.setItem('userData', JSON.stringify({ email, username, password }));
-    await AsyncStorage.setItem('isLoggedIn', 'true');
+    if (users.some(u => u.email === email)) {
+      Alert.alert('Error', 'Email already registered');
+      return;
+    }
+
+    const newUser = {
+      id: Date.now().toString(),
+      email,
+      username,
+      password
+    };
+
+    users.push(newUser);
+    await AsyncStorage.setItem('users', JSON.stringify(users));
+
     Alert.alert('Success', 'Account created');
     navigation.navigate('Login');
   };
