@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import styles from '../styles/newsFeedStyles';
+import createStyles from '../styles/newsFeedStyles'; // theme-based styles function
 
 export default function NewsFeed({ navigation, setLoggedIn }) {
   const [posts, setPosts] = useState([]);
@@ -24,49 +24,52 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
   const [activePostId, setActivePostId] = useState(null);
   const [showAddEmojiModal, setShowAddEmojiModal] = useState(false);
   const [commentText, setCommentText] = useState('');
-  const [activeCommentPostId, setActiveCommentPostId] = useState(null); // which post's comment input is visible
+  const [activeCommentPostId, setActiveCommentPostId] = useState(null);
+  const [showCustomThemes, setShowCustomThemes] = useState(true);
 
   const defaultEmojis = ['👍', '😂', '🔥', '❤️', '😮'];
   const addButton = { add: true };
 
+  const defaultTheme = {
+    pageBackground: '#eef2f5',
+    headerBackground: '#38b6ff',
+    usernameColor: '#333',
+    textColor: '#222',
+    postBackground: '#fff',
+    commentBackground: '#eee',
+    buttonBackground: '#0571d3',
+    buttonTextColor: '#fff',
+    reactionTextColor: '#0571d3',
+    emojiPopupBackground: '#fff',
+  };
+
   // Generate all emojis
   const allEmojis = useMemo(() => {
     const emojiList = [];
-
-    // Basic emoji ranges
     const emojiRanges = [
-      [0x1f600, 0x1f64f], // Emoticons
-      [0x1f300, 0x1f5ff], // Misc symbols
-      [0x1f680, 0x1f6ff], // Transport & map
-      [0x1f900, 0x1f9ff], // Supplemental
-      [0x2700, 0x27bf],   // Dingbats
-      [0x2600, 0x26ff],   // Misc symbols
+      [0x1f600, 0x1f64f],
+      [0x1f300, 0x1f5ff],
+      [0x1f680, 0x1f6ff],
+      [0x1f900, 0x1f9ff],
+      [0x2700, 0x27bf],
+      [0x2600, 0x26ff],
     ];
-
-    for (const [startCode, endCode] of emojiRanges) {
-      for (let codePoint = startCode; codePoint <= endCode; codePoint++) {
-        try {
-          const emojiChar = String.fromCodePoint(codePoint);
-          if (emojiChar && emojiChar.trim() !== '') emojiList.push(emojiChar);
-        } catch (error) {}
+    for (const [start, end] of emojiRanges) {
+      for (let cp = start; cp <= end; cp++) {
+        try { emojiList.push(String.fromCodePoint(cp)); } catch {}
       }
     }
-
-    // Regional indicator symbols (flags)
     const regionalStart = 0x1f1e6;
     const regionalEnd = 0x1f1ff;
     for (let first = regionalStart; first <= regionalEnd; first++) {
       for (let second = regionalStart; second <= regionalEnd; second++) {
-        try {
-          emojiList.push(String.fromCodePoint(first, second));
-        } catch (error) {}
+        try { emojiList.push(String.fromCodePoint(first, second)); } catch {}
       }
     }
-
     return [...new Set(emojiList)];
   }, []);
 
-  // Load posts, user, and custom emojis from storage
+  // Load posts, user, and custom emojis
   useFocusEffect(
     React.useCallback(() => {
       async function loadData() {
@@ -86,8 +89,10 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
           profilePic: post.profilePic || null,
           comments: post.comments?.map(comment => ({
             ...comment,
-            profilePic: comment.profilePic || null
-          })) || []
+            profilePic: comment.profilePic || null,
+            userId: comment.userId || comment.user
+          })) || [],
+          theme: post.theme || defaultTheme
         }));
         setPosts(normalizedPosts);
 
@@ -95,7 +100,6 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
         setCustomEmojis(parsedCustom);
         setEmojiOptions([...defaultEmojis, ...parsedCustom]);
       }
-
       loadData();
     }, [])
   );
@@ -108,7 +112,6 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
 
   const toggleLike = async (postId, emoji = '👍') => {
     if (!currentUser) return;
-
     const updatedPosts = posts.map(post => {
       if (post.id === postId) {
         const likes = post.likes || {};
@@ -120,14 +123,12 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
       }
       return post;
     });
-
     setPosts(updatedPosts);
     await AsyncStorage.setItem('posts', JSON.stringify(updatedPosts));
   };
 
   const saveCustomEmoji = async emoji => {
     if (!emoji || defaultEmojis.includes(emoji) || customEmojis.includes(emoji)) return;
-
     const updatedCustom = [...customEmojis, emoji];
     setCustomEmojis(updatedCustom);
     setEmojiOptions([...defaultEmojis, ...updatedCustom]);
@@ -145,11 +146,11 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
 
   const addComment = async (postId, text) => {
     if (!text.trim() || !currentUser) return;
-
     const updatedPosts = posts.map(post => {
       if (post.id === postId) {
         const newComment = {
           user: currentUser.username,
+          userId: currentUser.id,
           text,
           profilePic: currentUser.profilePic || null
         };
@@ -157,48 +158,56 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
       }
       return post;
     });
-
     setPosts(updatedPosts);
     setCommentText('');
-    setActiveCommentPostId(null); // hide input after posting
+    setActiveCommentPostId(null);
     await AsyncStorage.setItem('posts', JSON.stringify(updatedPosts));
   };
 
   const renderPost = ({ item }) => {
+    const postTheme = showCustomThemes ? (item.theme || defaultTheme) : defaultTheme;
+    const postStyles = createStyles(postTheme);
+
     const reactions = groupedReactions(item.likes);
     const userReacted = item.likes?.[currentUser?.id];
     const comments = item.comments || [];
     const isCommentBoxVisible = activeCommentPostId === item.id;
 
     return (
-      <View style={styles.postCard}>
-        <View style={styles.postHeader}>
-          <Image
-            source={item.profilePic ? { uri: item.profilePic } : require('../assets/placeholder.png')}
-            style={styles.userImgPlaceholder}
-          />
-          <View style={{ marginLeft: 8 }}>
-            <Text style={styles.username}>{item.user}</Text>
-            <Text style={styles.time}>{item.time}</Text>
-          </View>
+      <View style={postStyles.postCard}>
+        <View style={postStyles.postHeader}>
+          <TouchableOpacity onPress={() => navigation.navigate('Profile', { userId: item.userId })}>
+            <Image
+              source={item.profilePic ? { uri: item.profilePic } : require('../assets/placeholder.png')}
+              style={postStyles.userImgPlaceholder}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{ marginLeft: 8 }}
+            onPress={() => navigation.navigate('Profile', { userId: item.userId })}
+          >
+            <Text style={postStyles.username}>{item.user}</Text>
+            <Text style={postStyles.time}>{item.time}</Text>
+          </TouchableOpacity>
         </View>
 
-        {item.text ? <Text style={styles.postText}>{item.text}</Text> : null}
+        {item.text && <Text style={postStyles.postText}>{item.text}</Text>}
 
         {item.images?.length > 0 && (
-          <ScrollView horizontal style={styles.imageContainer}>
+          <ScrollView horizontal style={postStyles.imageContainer}>
             {item.images.map((uri, idx) => (
-              <Image key={idx} source={{ uri }} style={styles.inlinePostImage} />
+              <Image key={idx} source={{ uri }} style={postStyles.inlinePostImage} />
             ))}
           </ScrollView>
         )}
 
-        <View style={styles.actionsRow}>
+        <View style={postStyles.actionsRow}>
           <TouchableOpacity
             onPress={() => toggleLike(item.id)}
             onLongPress={() => { setActivePostId(item.id); setShowEmojiPopup(true); }}
           >
-            <Text style={styles.actionText}>
+            <Text style={postStyles.actionText}>
               {userReacted ? '❌ Remove' : '👍 Like'} {item.likes ? Object.keys(item.likes).length : ''}
             </Text>
           </TouchableOpacity>
@@ -207,14 +216,14 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
             setActiveCommentPostId(isCommentBoxVisible ? null : item.id);
             if (!isCommentBoxVisible) setCommentText('');
           }}>
-            <Text style={styles.actionText}>💬 Comment</Text>
+            <Text style={postStyles.actionText}>💬 Comment</Text>
           </TouchableOpacity>
         </View>
 
         {reactions.length > 0 && (
-          <View style={styles.reactionsContainer}>
+          <View style={postStyles.reactionsContainer}>
             {reactions.map(([emoji, count], idx) => (
-              <Text key={idx} style={styles.reactionCount}>
+              <Text key={idx} style={postStyles.reactionCount}>
                 {emoji} {count}
               </Text>
             ))}
@@ -222,37 +231,42 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
         )}
 
         {comments.length > 0 && (
-          <View style={styles.commentsContainer}>
+          <View style={postStyles.commentsContainer}>
             {comments.slice(0, 2).map((comment, idx) => (
-              <View style={styles.commentRow} key={idx}>
-                <Image
-                  source={comment.profilePic ? { uri: comment.profilePic } : require('../assets/placeholder.png')}
-                  style={styles.profilePic}
-                />
-                <View style={styles.commentBubble}>
-                  <Text style={styles.commentUser}>{comment.user}:</Text>
-                  <Text style={styles.commentText}>{comment.text}</Text>
-                </View>
+              <View style={postStyles.commentRow} key={idx}>
+                <TouchableOpacity onPress={() => navigation.navigate('Profile', { userId: comment.userId })}>
+                  <Image
+                    source={comment.profilePic ? { uri: comment.profilePic } : require('../assets/placeholder.png')}
+                    style={postStyles.profilePic}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={postStyles.commentBubble}
+                  onPress={() => navigation.navigate('Profile', { userId: comment.userId })}
+                >
+                  <Text style={postStyles.commentUser}>{comment.user}:</Text>
+                  <Text style={postStyles.commentText}>{comment.text}</Text>
+                </TouchableOpacity>
               </View>
             ))}
             {comments.length > 2 && (
               <TouchableOpacity onPress={() => navigation.navigate('Comments', { postId: item.id })}>
-                <Text style={styles.viewAllCommentsText}>View all {comments.length} comments</Text>
+                <Text style={postStyles.viewAllCommentsText}>View all {comments.length} comments</Text>
               </TouchableOpacity>
             )}
           </View>
         )}
 
         {isCommentBoxVisible && (
-          <View style={styles.commentInputRow}>
+          <View style={postStyles.commentInputRow}>
             <TextInput
-              style={styles.commentInput}
+              style={postStyles.commentInput}
               placeholder="Write a comment..."
               value={commentText}
-              onChangeText={text => setCommentText(text)}
+              onChangeText={setCommentText}
             />
             <TouchableOpacity onPress={() => addComment(item.id, commentText)}>
-              <Text style={styles.commentBtnText}>Post</Text>
+              <Text style={postStyles.commentBtnText}>Post</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -260,24 +274,26 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
     );
   };
 
+  const pageStyles = createStyles(defaultTheme);
+
   return (
     <TouchableWithoutFeedback onPress={() => setActiveCommentPostId(null)}>
-      <View style={styles.pageContainer}>
-        <View style={styles.header}>
-          <Image source={require('../assets/logo.png')} style={styles.logo} />
-          <View style={styles.headerRight}>
-            <Text style={styles.usernameHeader}>{currentUser?.username || 'User'}</Text>
-            <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-              <Text style={styles.logoutText}>Log Out</Text>
+      <View style={pageStyles.pageContainer}>
+        <View style={pageStyles.header}>
+          <Image source={require('../assets/logo.png')} style={pageStyles.logo} />
+          <View style={pageStyles.headerRight}>
+            <Text style={pageStyles.usernameHeader}>{currentUser?.username || 'User'}</Text>
+            <TouchableOpacity style={pageStyles.logoutBtn} onPress={handleLogout}>
+              <Text style={pageStyles.logoutText}>Log Out</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         <TouchableOpacity
-          style={styles.createPostBtn}
+          style={pageStyles.createPostBtn}
           onPress={() => navigation.navigate('CreatePost')}
         >
-          <Text style={styles.createPostText}>➕ Create Post</Text>
+          <Text style={pageStyles.createPostText}>➕ Create Post</Text>
         </TouchableOpacity>
 
         <FlatList
@@ -290,15 +306,15 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
         {/* Emoji popup */}
         <Modal transparent visible={showEmojiPopup} animationType="fade">
           <TouchableOpacity
-            style={styles.modalBackdrop}
+            style={pageStyles.modalBackdrop}
             onPress={() => setShowEmojiPopup(false)}
             activeOpacity={1}
           >
-            <View style={styles.emojiPopup}>
+            <View style={pageStyles.emojiPopup}>
               {[...emojiOptions, addButton].map((emoji, idx) => (
                 <TouchableOpacity
                   key={idx}
-                  style={styles.emojiPopupItem}
+                  style={pageStyles.emojiPopupItem}
                   onPress={() => {
                     if (emoji.add) {
                       setShowEmojiPopup(false);
@@ -309,7 +325,7 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
                     }
                   }}
                 >
-                  <Text style={styles.emojiPopupText}>{emoji.add ? '➕' : emoji}</Text>
+                  <Text style={pageStyles.emojiPopupText}>{emoji.add ? '➕' : emoji}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -319,32 +335,37 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
         {/* Big emoji modal */}
         <Modal transparent visible={showAddEmojiModal} animationType="slide">
           <TouchableOpacity
-            style={styles.modalBackdrop}
+            style={pageStyles.modalBackdrop}
             onPress={() => setShowAddEmojiModal(false)}
             activeOpacity={1}
           >
-            <View style={styles.bigEmojiSheet}>
-              <Text style={styles.bigEmojiTitle}>Pick any emoji</Text>
+            <View style={pageStyles.bigEmojiSheet}>
+              <Text style={pageStyles.bigEmojiTitle}>Pick any emoji</Text>
+
               <FlatList
                 data={allEmojis}
                 keyExtractor={(item, idx) => `${item}-${idx}`}
                 numColumns={6}
-                initialNumToRender={60}
-                windowSize={10}
+                contentContainerStyle={{ paddingHorizontal: 5 }}
+                columnWrapperStyle={{ justifyContent: 'space-between', marginBottom: 10 }}
                 renderItem={({ item }) => (
                   <TouchableOpacity
-                    style={styles.bigEmojiItem}
+                    style={pageStyles.bigEmojiItem}
                     onPress={async () => {
                       await saveCustomEmoji(item);
                       toggleLike(activePostId, item);
                       setShowAddEmojiModal(false);
                     }}
                   >
-                    <Text style={styles.bigEmojiText}>{item}</Text>
+                    <Text style={pageStyles.bigEmojiText}>{item}</Text>
                   </TouchableOpacity>
                 )}
               />
-              <TouchableOpacity style={styles.bigEmojiClose} onPress={() => setShowAddEmojiModal(false)}>
+
+              <TouchableOpacity
+                style={pageStyles.bigEmojiClose}
+                onPress={() => setShowAddEmojiModal(false)}
+              >
                 <Text style={{ fontWeight: 'bold' }}>Close</Text>
               </TouchableOpacity>
             </View>

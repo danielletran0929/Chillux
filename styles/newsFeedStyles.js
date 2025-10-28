@@ -1,258 +1,194 @@
 import { StyleSheet } from 'react-native';
 
-export default StyleSheet.create({
-  pageContainer: {
-    flex: 1,
-    backgroundColor: '#eef2f5',
-    paddingHorizontal: 10
-  },
+export default function createStyles(theme = {}) {
+  // default colors
+  const defaultTheme = {
+    pageBackground: '#eef2f5',
+    headerBackground: '#38b6ff',
+    usernameColor: '#555',
+    buttonBackground: '#0571d3',
+    buttonTextColor: '#fff',
+    postBackground: '#fff',
+    textColor: '#222',
+    reactionTextColor: '#0571d3',
+    commentBackground: '#f5f5f5',
+    emojiPopupBackground: '#fff',
+  };
 
-  header: {
-    width: '100%',
-    padding: 12,
-    backgroundColor: '#38b6ff',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 50
-  },
-  logo: {
-    width: 40,
-    height: 40,
-    resizeMode: 'contain'
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6
-  },
-  usernameHeader: {
-    color: '#fff',
-    fontWeight: 'bold',
-    marginRight: 8
-  },
-  logoutBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    backgroundColor: '#fff',
-    borderRadius: 6
-  },
-  logoutText: {
-    fontSize: 16
-  },
+  const customTheme = { ...defaultTheme, ...theme };
 
-  createPostBtn: {
-    backgroundColor: '#0571d3',
-    paddingVertical: 12,
-    borderRadius: 6,
-    marginVertical: 10,
-    alignItems: 'center'
-  },
-  createPostText: {
-    color: '#fff',
-    fontWeight: 'bold'
-  },
-
-  postCard: {
-    backgroundColor: '#fff',
-    padding: 12,
-    marginVertical: 6,
-    borderRadius: 10,
-    width: '100%',
-    borderBottomWidth: 1,
-    borderColor: '#ddd'
-  },
-  postHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6
-  },
-  userImgPlaceholder: {
-    width: 40,
-    height: 40,
-    backgroundColor: '#aaa',
-    borderRadius: 20,
-    marginRight: 10
-  },
-  username: {
-    fontWeight: 'bold'
-  },
-  time: {
-    color: '#555',
-    fontSize: 12
-  },
-  postText: {
-    marginVertical: 8
-  },
-
-  inlinePostImage: {
-    width: 150,
-    height: 150,
-    borderRadius: 10,
-    marginRight: 10
-  },
-  imageContainer: {
-    marginVertical: 10
-  },
-
-  actionsRow: {
-    flexDirection: 'row',
-    marginTop: 10,
-    justifyContent: 'space-around'
-  },
-  actionText: {
-    color: '#0571d3',
-    fontWeight: '500'
-  },
-
-  reactionsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 5
-  },
-  reactionCount: {
-    marginRight: 6,
-    fontSize: 16
-  },
-
-  commentsContainer: {
-    marginTop: 6
-  },
-  commentItem: {
-    flexDirection: 'row',
-    marginVertical: 2
-  },
-  commentUser: {
-    fontWeight: 'bold',
-    marginRight: 4
-  },
-  commentText: {},
-  viewAllCommentsText: {
-    color: '#0571d3',
-    marginTop: 4,
-    fontWeight: '500'
-  },
-
-  commentInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8
-  },
-  commentInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    height: 36
-  },
-  commentBtnText: {
-    marginLeft: 8,
-    color: '#0571d3',
-    fontWeight: 'bold'
-  },
-
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-
-  emojiPopup: {
-    backgroundColor: '#fff',
-    padding: 14,
-    borderRadius: 12,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center'
-  },
-  emojiPopupItem: {
-    margin: 6
-  },
-  emojiPopupText: {
-    fontSize: 28
-  },
-
-  bigEmojiSheet: {
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    height: '50%',
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 15
-  },
-  bigEmojiTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    textAlign: 'center'
-  },
-  bigEmojiItem: {
-    width: '16%',
-    aspectRatio: 1,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  bigEmojiText: {
-    fontSize: 30
-  },
-  bigEmojiClose: {
-    width: '100%',
-    paddingVertical: 12,
-    alignItems: 'center',
-    backgroundColor: '#eee',
-    marginTop: 6,
-    borderRadius: 10
-  },
-
-  commentBox: {
-    backgroundColor: '#fff',
-    padding: 18,
-    borderRadius: 12,
-    width: '90%'
-  },
-  postCommentBtn: {
-    backgroundColor: '#0571d3',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8
-  },
-  cancelCommentBtn: {
-    backgroundColor: '#ccc',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8
-  },
-  commentRow: {
-  flexDirection: 'row',
-  alignItems: 'flex-start',
-  marginVertical: 4
+  return StyleSheet.create({
+    pageContainer: {
+      flex: 1,
+      backgroundColor: customTheme.pageBackground,
+      paddingHorizontal: 10,
+    },
+    header: {
+      width: '100%',
+      padding: 12,
+      backgroundColor: customTheme.headerBackground,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: 50,
+    },
+    logo: { width: 40, height: 40, resizeMode: 'contain' },
+    headerRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    usernameHeader: {
+      color: customTheme.usernameColor,
+      fontWeight: 'bold',
+      marginRight: 8,
+    },
+    logoutBtn: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      backgroundColor: customTheme.buttonBackground,
+      borderRadius: 6,
+    },
+    logoutText: { fontSize: 16, color: customTheme.buttonTextColor },
+    createPostBtn: {
+      backgroundColor: customTheme.buttonBackground,
+      paddingVertical: 12,
+      borderRadius: 6,
+      marginVertical: 10,
+      alignItems: 'center',
+    },
+    createPostText: { color: customTheme.buttonTextColor, fontWeight: 'bold' },
+    postCard: {
+      backgroundColor: customTheme.postBackground,
+      padding: 12,
+      marginVertical: 6,
+      borderRadius: 10,
+      width: '100%',
+      borderBottomWidth: 1,
+      borderColor: '#ddd',
+    },
+    postHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+    userImgPlaceholder: {
+      width: 40,
+      height: 40,
+      backgroundColor: '#aaa',
+      borderRadius: 20,
+      marginRight: 10,
+    },
+    username: { fontWeight: 'bold', color: customTheme.usernameColor },
+    time: { color: '#555', fontSize: 12 },
+    postText: { marginVertical: 8, color: customTheme.textColor },
+    inlinePostImage: {
+      width: 150,
+      height: 150,
+      borderRadius: 10,
+      marginRight: 10,
+    },
+    imageContainer: { marginVertical: 10 },
+    actionsRow: {
+      flexDirection: 'row',
+      marginTop: 10,
+      justifyContent: 'space-around',
+    },
+    actionText: { color: customTheme.textColor, fontWeight: '500' },
+    reactionsContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginTop: 5,
+    },
+    reactionCount: { marginRight: 6, fontSize: 16, color: customTheme.reactionTextColor },
+    commentsContainer: { marginTop: 6 },
+    commentRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      marginVertical: 4,
+    },
+    profilePic: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: '#aaa',
+      marginRight: 1,
+    },
+    commentBubble: {
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: 12,
+      flex: 1,
+      backgroundColor: customTheme.commentBackground,
+    },
+    commentUser: {
+      fontWeight: 'bold',
+      marginBottom: 2,
+      marginTop: -2,
+      color: customTheme.usernameColor,
+    },
+    commentText: { color: customTheme.textColor, fontSize: 14 },
+    commentInputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 8,
+    },
+    commentInput: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: '#ccc',
+      borderRadius: 20,
+      paddingHorizontal: 12,
+      height: 36,
+      color: customTheme.textColor,
+    },
+    commentBtnText: {
+      marginLeft: 8,
+      color: customTheme.buttonBackground,
+      fontWeight: 'bold',
+    },
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.4)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    emojiPopup: {
+      backgroundColor: customTheme.emojiPopupBackground,
+      padding: 14,
+      borderRadius: 12,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+    },
+    emojiPopupText: { fontSize: 28 },
+    bigEmojiSheet: {
+      position: 'absolute',
+      bottom: 0,
+      width: '100%',
+      height: '50%',
+      backgroundColor: customTheme.pageBackground,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      paddingHorizontal: 5, // only horizontal padding
+      paddingTop: 10,
+      paddingBottom: 10,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    bigEmojiItem: {
+  width: '15%', // ~1/6th minus spacing
+  aspectRatio: 1, // square
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginVertical: 2,
 },
-profilePic: {
-  width: 32,
-  height: 32,
-  borderRadius: 16,
-  backgroundColor: '#aaa',
-  marginRight: 1
-},
-commentBubble: {
-  paddingVertical: 6,
-  paddingHorizontal: 10,
-  borderRadius: 12,
-  flex: 1
-},
-commentUser: {
-  fontWeight: 'bold',
-  marginBottom: 2,
-  color: '#333',
-  marginTop: -2
-},
-commentText: {
-  color: '#222',
-  fontSize: 14
+    bigEmojiTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      marginBottom: 10,
+      textAlign: 'center',
+      color: customTheme.textColor,
+    },
+    bigEmojiText: { fontSize: 30 },
+    bigEmojiClose: {
+      width: '100%',
+      paddingVertical: 12,
+      alignItems: 'center',
+      backgroundColor: customTheme.buttonBackground,
+      borderRadius: 10,
+    },
+  });
 }
-
-});

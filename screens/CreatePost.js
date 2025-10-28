@@ -2,15 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
-import styles from '../styles/CreatePostStyles';
+import createStyles from '../styles/createPostStyles';
 
-export default function CreatePost({ navigation }) {
+export default function CreatePost({ navigation, theme = {} }) {
+  const styles = createStyles(theme);
+
   const [text, setText] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
   const [images, setImages] = useState([]);
 
   useEffect(() => {
-    // Load current user from AsyncStorage
     async function loadUser() {
       try {
         const savedUser = await AsyncStorage.getItem('currentUser');
@@ -22,14 +23,13 @@ export default function CreatePost({ navigation }) {
     loadUser();
   }, []);
 
-  // Pick images from the gallery
   const pickImages = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
         quality: 0.7,
-        selectionLimit: 5
+        selectionLimit: 5,
       });
 
       if (!result.canceled) {
@@ -40,48 +40,49 @@ export default function CreatePost({ navigation }) {
     }
   };
 
-  // Handle post submission
-  // Handle post submission
-const handlePost = async () => {
-  if (!text.trim() && images.length === 0) {
-    Alert.alert('Error', 'Please enter text or select at least one image.');
-    return;
-  }
-  if (!currentUser) {
-    Alert.alert('Error', 'User not found.');
-    return;
-  }
+  const handlePost = async () => {
+    if (!text.trim() && images.length === 0) {
+      Alert.alert('Error', 'Please enter text or select at least one image.');
+      return;
+    }
+    if (!currentUser) {
+      Alert.alert('Error', 'User not found.');
+      return;
+    }
 
-  try {
-    const storedPosts = await AsyncStorage.getItem('posts');
-    const posts = storedPosts ? JSON.parse(storedPosts) : [];
+    try {
+      const storedPosts = await AsyncStorage.getItem('posts');
+      const posts = storedPosts ? JSON.parse(storedPosts) : [];
 
-    const newPost = {
-      id: Date.now().toString(),
-      userId: currentUser.id,
-      user: currentUser.username,
-      time: 'Just now',
-      text: text.trim(),
-      likes: {},       // empty object for likes
-      images           // array of images (can be empty)
-    };
+      const newPost = {
+        id: Date.now().toString(),
+        userId: currentUser.id,       // ensures profile navigation works
+        user: currentUser.username,
+        time: 'Just now',
+        text: text.trim(),
+        likes: {},
+        images,
+        profilePic: currentUser.profilePic || null, // optional but good for feed
+        comments: [],
+      };
 
-    await AsyncStorage.setItem('posts', JSON.stringify([newPost, ...posts]));
+      await AsyncStorage.setItem('posts', JSON.stringify([newPost, ...posts]));
 
-    // Clear fields
-    setText('');
-    setImages([]);
-
-    // Go back to the previous screen
-    navigation.goBack();
-  } catch (e) {
-    console.log('Error saving post:', e);
-  }
-};
-
+      setText('');
+      setImages([]);
+      navigation.goBack();
+    } catch (e) {
+      console.log('Error saving post:', e);
+    }
+  };
 
   return (
     <ScrollView style={styles.pageContainer} contentContainerStyle={{ paddingBottom: 20 }}>
+      {/* Back Button */}
+      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <Text style={styles.backButtonText}>⬅ Back</Text>
+      </TouchableOpacity>
+
       <Text style={styles.headerText}>Create Post</Text>
 
       <TextInput
@@ -90,6 +91,7 @@ const handlePost = async () => {
         value={text}
         onChangeText={setText}
         multiline
+        placeholderTextColor={theme.placeholderTextColor || '#888'}
       />
 
       <TouchableOpacity style={styles.postButton} onPress={pickImages}>
