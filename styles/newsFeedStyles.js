@@ -86,14 +86,14 @@ export default StyleSheet.create({
   },
 
   inlinePostImage: {
-  width: 150,
-  height: 150,
-  borderRadius: 10,
-  marginRight: 10,
-},
-imageContainer: {
-  marginVertical: 10,
-},
+    width: 150,
+    height: 150,
+    borderRadius: 10,
+    marginRight: 10
+  },
+  imageContainer: {
+    marginVertical: 10
+  },
 
   actionsRow: {
     flexDirection: 'row',
@@ -115,6 +115,43 @@ imageContainer: {
     fontSize: 16
   },
 
+  commentsContainer: {
+    marginTop: 6
+  },
+  commentItem: {
+    flexDirection: 'row',
+    marginVertical: 2
+  },
+  commentUser: {
+    fontWeight: 'bold',
+    marginRight: 4
+  },
+  commentText: {},
+  viewAllCommentsText: {
+    color: '#0571d3',
+    marginTop: 4,
+    fontWeight: '500'
+  },
+
+  commentInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8
+  },
+  commentInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    height: 36
+  },
+  commentBtnText: {
+    marginLeft: 8,
+    color: '#0571d3',
+    fontWeight: 'bold'
+  },
+
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -127,76 +164,95 @@ imageContainer: {
     padding: 14,
     borderRadius: 12,
     flexDirection: 'row',
-    alignItems: 'center'
+    flexWrap: 'wrap',
+    justifyContent: 'center'
   },
   emojiPopupItem: {
-    marginHorizontal: 6
+    margin: 6
   },
   emojiPopupText: {
     fontSize: 28
   },
+
   bigEmojiSheet: {
-  position: 'absolute',
-  bottom: 0,
-  width: '100%',
-  height: '50%', // takes half the screen
-  backgroundColor: '#fff',
-  borderTopLeftRadius: 20,
-  borderTopRightRadius: 20,
-  padding: 15
-},
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    height: '50%',
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 15
+  },
+  bigEmojiTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center'
+  },
+  bigEmojiItem: {
+    width: '16%',
+    aspectRatio: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  bigEmojiText: {
+    fontSize: 30
+  },
+  bigEmojiClose: {
+    width: '100%',
+    paddingVertical: 12,
+    alignItems: 'center',
+    backgroundColor: '#eee',
+    marginTop: 6,
+    borderRadius: 10
+  },
 
-bigEmojiTitle: {
-  fontSize: 18,
-  fontWeight: 'bold',
-  marginBottom: 10
+  commentBox: {
+    backgroundColor: '#fff',
+    padding: 18,
+    borderRadius: 12,
+    width: '90%'
+  },
+  postCommentBtn: {
+    backgroundColor: '#0571d3',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8
+  },
+  cancelCommentBtn: {
+    backgroundColor: '#ccc',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8
+  },
+  commentRow: {
+  flexDirection: 'row',
+  alignItems: 'flex-start',
+  marginVertical: 4
 },
-
-bigEmojiItem: {
-  width: '16%',
-  aspectRatio: 1,
-  justifyContent: 'center',
-  alignItems: 'center'
+profilePic: {
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+  backgroundColor: '#aaa',
+  marginRight: 1
 },
-
-bigEmojiText: {
-  fontSize: 30 // bigger emojis!
-},
-
-bigEmojiClose: {
-  width: '100%',
-  paddingVertical: 12,
-  alignItems: 'center',
-  backgroundColor: '#eee',
-  marginTop: 6,
-  borderRadius: 10
-},
-commentBox: {
-  backgroundColor: '#fff',
-  padding: 18,
+commentBubble: {
+  paddingVertical: 6,
+  paddingHorizontal: 10,
   borderRadius: 12,
-  width: '90%'
+  flex: 1
 },
-commentInput: {
-  borderWidth: 1,
-  borderColor: '#ccc',
-  borderRadius: 6,
-  padding: 10,
-  minHeight: 70,
-  marginVertical: 10
+commentUser: {
+  fontWeight: 'bold',
+  marginBottom: 2,
+  color: '#333',
+  marginTop: -2
 },
-postCommentBtn: {
-  backgroundColor: '#0571d3',
-  paddingVertical: 8,
-  paddingHorizontal: 16,
-  borderRadius: 8
-},
-cancelCommentBtn: {
-  backgroundColor: '#ccc',
-  paddingVertical: 8,
-  paddingHorizontal: 16,
-  borderRadius: 8
-},
-
+commentText: {
+  color: '#222',
+  fontSize: 14
+}
 
 });

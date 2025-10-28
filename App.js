@@ -9,6 +9,7 @@ import RegisterScreen from './screens/RegisterScreen';
 import NewsFeed from './screens/NewsFeed';
 import ForgotPassword from './screens/ForgotPassword';
 import CreatePost from './screens/CreatePost';
+import Comments from './screens/Comments';
 
 const Stack = createStackNavigator();
 
@@ -44,6 +45,7 @@ export default function App() {
             {props => <NewsFeed {...props} setLoggedIn={setLoggedIn} />}
           </Stack.Screen>
           <Stack.Screen name="CreatePost" component={CreatePost} />
+          <Stack.Screen name="Comments" component={Comments} />
         </>
       ) : (
         <>
