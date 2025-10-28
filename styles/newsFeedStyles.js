@@ -38,6 +38,8 @@ export default function createStyles(theme = {}) {
       color: customTheme.usernameColor,
       fontWeight: 'bold',
       marginRight: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
     },
     logoutBtn: {
       paddingHorizontal: 10,
@@ -190,5 +192,16 @@ export default function createStyles(theme = {}) {
       backgroundColor: customTheme.buttonBackground,
       borderRadius: 10,
     },
+    headerProfilePic: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      marginRight: 8,
+    },
+  userInfoRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginRight: 8,
+},
   });
 }

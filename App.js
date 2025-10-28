@@ -10,6 +10,11 @@ import NewsFeed from './screens/NewsFeed';
 import ForgotPassword from './screens/ForgotPassword';
 import CreatePost from './screens/CreatePost';
 import Comments from './screens/Comments';
+import Profile from './screens/ProfileScreen';
+import Settings from './screens/Settings';
+import ChangeEmail from './screens/ChangeEmail';
+import ChangePassword from './screens/ChangePassword';
+import ChangeUsername from './screens/ChangeUsername';
 
 const Stack = createStackNavigator();
 
@@ -46,6 +51,11 @@ export default function App() {
           </Stack.Screen>
           <Stack.Screen name="CreatePost" component={CreatePost} />
           <Stack.Screen name="Comments" component={Comments} />
+          <Stack.Screen name="Profile" component={Profile} />
+          <Stack.Screen name="Settings" component={Settings} />
+          <Stack.Screen name="ChangeEmail" component={ChangeEmail} />
+          <Stack.Screen name="ChangePassword" component={ChangePassword} />
+          <Stack.Screen name="ChangeUsername" component={ChangeUsername} />
         </>
       ) : (
         <>
