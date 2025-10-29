@@ -35,13 +35,19 @@ export default function PostCard({ post, currentUser, onLike, onComment, navigat
     setActiveCommentBox(false);
   };
 
+  // Determine profile pic for post (use latest for current user)
+  const postProfilePic =
+    post.userId === currentUser?.id
+      ? currentUser.profilePic
+      : post.profilePic;
+
   return (
     <View style={postStyles.postCard}>
       {/* Header */}
       <View style={postStyles.postHeader}>
         <TouchableOpacity onPress={() => navigation.navigate('Profile', { userId: post.userId })}>
           <Image
-            source={post.profilePic ? { uri: post.profilePic } : require('../assets/placeholder.png')}
+            source={postProfilePic ? { uri: postProfilePic } : require('../assets/placeholder.png')}
             style={postStyles.userImgPlaceholder}
           />
         </TouchableOpacity>
@@ -92,20 +98,28 @@ export default function PostCard({ post, currentUser, onLike, onComment, navigat
       {/* Comments */}
       {post.comments?.length > 0 && (
         <View style={postStyles.commentsContainer}>
-          {post.comments.slice(0, 2).map((comment, idx) => (
-            <View key={idx} style={postStyles.commentRow}>
-              <TouchableOpacity onPress={() => navigation.navigate('Profile', { userId: comment.userId })}>
-                <Image
-                  source={comment.profilePic ? { uri: comment.profilePic } : require('../assets/placeholder.png')}
-                  style={postStyles.profilePic}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity style={postStyles.commentBubble}>
-                <Text style={postStyles.commentUser}>{comment.user}:</Text>
-                <Text style={postStyles.commentText}>{comment.text}</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
+          {post.comments.slice(0, 2).map((comment, idx) => {
+            // Use latest profile pic for current user
+            const commentProfilePic =
+              comment.userId === currentUser?.id
+                ? currentUser.profilePic
+                : comment.profilePic;
+
+            return (
+              <View key={idx} style={postStyles.commentRow}>
+                <TouchableOpacity onPress={() => navigation.navigate('Profile', { userId: comment.userId })}>
+                  <Image
+                    source={commentProfilePic ? { uri: commentProfilePic } : require('../assets/placeholder.png')}
+                    style={postStyles.profilePic}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity style={postStyles.commentBubble}>
+                  <Text style={postStyles.commentUser}>{comment.user}:</Text>
+                  <Text style={postStyles.commentText}>{comment.text}</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
           {post.comments.length > 2 && (
             <TouchableOpacity onPress={() => navigation.navigate('Comments', { postId: post.id })}>
               <Text style={postStyles.viewAllCommentsText}>View all {post.comments.length} comments</Text>

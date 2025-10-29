@@ -24,10 +24,30 @@ export default function Settings({ navigation, setLoggedIn }) {
   };
 
   const handleLogout = async () => {
+  try {
+    // Remove only the login flag
     await AsyncStorage.removeItem('isLoggedIn');
-    await AsyncStorage.removeItem('currentUser');
+
+    // Keep currentUser intact
+    const currentUserRaw = await AsyncStorage.getItem('currentUser');
+    if (currentUserRaw) {
+      const parsedUser = JSON.parse(currentUserRaw);
+      await AsyncStorage.setItem('lastLoggedInUser', JSON.stringify(parsedUser.id));
+    }
+
+    // Update login state
     if (setLoggedIn) setLoggedIn(false);
-  };
+
+    // ✅ Reset the navigation stack and go to Login
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Login' }],
+    });
+  } catch (error) {
+    console.log('Logout error:', error);
+  }
+};
+
 
   const handleNavigate = (screenName) => {
     navigation.navigate(screenName);

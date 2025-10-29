@@ -6,79 +6,59 @@ import createStyles from '../styles/createPostStyles';
 
 export default function CreatePost({ navigation, theme = {} }) {
   const styles = createStyles(theme);
-
   const [text, setText] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
   const [images, setImages] = useState([]);
 
   useEffect(() => {
     async function loadUser() {
-      try {
-        const savedUser = await AsyncStorage.getItem('currentUser');
-        if (savedUser) setCurrentUser(JSON.parse(savedUser));
-      } catch (e) {
-        console.log('Error loading user:', e);
-      }
+      const savedUser = await AsyncStorage.getItem('currentUser');
+      if (savedUser) setCurrentUser(JSON.parse(savedUser));
     }
     loadUser();
   }, []);
 
   const pickImages = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsMultipleSelection: true,
-        quality: 0.7,
-        selectionLimit: 5,
-      });
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 0.7,
+      selectionLimit: 5,
+    });
 
-      if (!result.canceled) {
-        setImages([...images, ...result.assets.map(a => a.uri)]);
-      }
-    } catch (e) {
-      console.log('Error picking images:', e);
+    if (!result.canceled) {
+      setImages([...images, ...result.assets.map(a => a.uri)]);
     }
   };
 
   const handlePost = async () => {
     if (!text.trim() && images.length === 0) {
-      Alert.alert('Error', 'Please enter text or select at least one image.');
+      Alert.alert('Error', 'Please write something or select at least one image.');
       return;
     }
-    if (!currentUser) {
-      Alert.alert('Error', 'User not found.');
-      return;
-    }
+    if (!currentUser) return;
 
-    try {
-      const storedPosts = await AsyncStorage.getItem('posts');
-      const posts = storedPosts ? JSON.parse(storedPosts) : [];
+    const storedPosts = await AsyncStorage.getItem('posts');
+    const posts = storedPosts ? JSON.parse(storedPosts) : [];
 
-      const newPost = {
-        id: Date.now().toString(),
-        userId: currentUser.id,       // ensures profile navigation works
-        user: currentUser.username,
-        time: 'Just now',
-        text: text.trim(),
-        likes: {},
-        images,
-        profilePic: currentUser.profilePic || null, // optional but good for feed
-        comments: [],
-      };
+    const newPost = {
+      id: Date.now().toString(),
+      userId: currentUser.id,
+      text: text.trim(),
+      images,
+      comments: [],
+      likes: {},
+      timestamp: Date.now(),
+    };
 
-      await AsyncStorage.setItem('posts', JSON.stringify([newPost, ...posts]));
-
-      setText('');
-      setImages([]);
-      navigation.goBack();
-    } catch (e) {
-      console.log('Error saving post:', e);
-    }
+    await AsyncStorage.setItem('posts', JSON.stringify([newPost, ...posts]));
+    setText('');
+    setImages([]);
+    navigation.goBack();
   };
 
   return (
-    <ScrollView style={styles.pageContainer} contentContainerStyle={{ paddingBottom: 20 }}>
-      {/* Back Button */}
+    <ScrollView style={styles.pageContainer}>
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
         <Text style={styles.backButtonText}>⬅ Back</Text>
       </TouchableOpacity>
@@ -106,7 +86,12 @@ export default function CreatePost({ navigation, theme = {} }) {
         </ScrollView>
       )}
 
-      <TouchableOpacity style={styles.postButton} onPress={handlePost}>
+      <TouchableOpacity
+        style={[styles.postButton,
+        (!text.trim() && images.length === 0) && { opacity: 0.4 }]}
+        disabled={!text.trim() && images.length === 0}
+        onPress={handlePost}
+      >
         <Text style={styles.postBtnText}>Post</Text>
       </TouchableOpacity>
     </ScrollView>

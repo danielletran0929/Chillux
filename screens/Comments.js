@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import styles from '../styles/commentsStyles';
-import placeholderPic from '../assets/placeholder.png'; // your placeholder
+import placeholderPic from '../assets/placeholder.png';
 
 export default function CommentPage({ route, navigation }) {
   const { postId } = route.params;
@@ -23,6 +23,7 @@ export default function CommentPage({ route, navigation }) {
     async function loadData() {
       const storedPosts = await AsyncStorage.getItem('posts');
       const userData = await AsyncStorage.getItem('currentUser');
+
       setPosts(storedPosts ? JSON.parse(storedPosts) : []);
       if (userData) setCurrentUser(JSON.parse(userData));
     }
@@ -37,11 +38,13 @@ export default function CommentPage({ route, navigation }) {
 
     const updatedPosts = posts.map(p => {
       if (p.id === postId) {
-        const updatedComments = [
-          ...(p.comments || []),
-          { user: currentUser.username, text: commentText, profilePic: currentUser.profilePic || null }
-        ];
-        return { ...p, comments: updatedComments };
+        const newComment = {
+          user: currentUser.username,
+          userId: currentUser.id, // ✅ store user id
+          text: commentText,
+          profilePic: currentUser.profilePic || null // ✅ track profile pic
+        };
+        return { ...p, comments: [...(p.comments || []), newComment] };
       }
       return p;
     });
@@ -73,20 +76,26 @@ export default function CommentPage({ route, navigation }) {
           renderItem={({ item, index }) => (
             <>
               <View style={styles.commentRow}>
-                <Image
-                  source={item.profilePic ? { uri: item.profilePic } : placeholderPic}
-                  style={styles.profilePic}
-                />
+                <TouchableOpacity
+                  onPress={() =>
+                    navigation.navigate('Profile', { userId: item.userId })
+                  }>
+                  <Image
+                    source={item.profilePic ? { uri: item.profilePic } : placeholderPic}
+                    style={styles.profilePic}
+                  />
+                </TouchableOpacity>
+
                 <View style={styles.commentBubble}>
                   <Text style={styles.commentUser}>{item.user}:</Text>
                   <Text style={styles.commentText}>{item.text}</Text>
                 </View>
               </View>
+
               {index < comments.length - 1 && <View style={styles.separator} />}
             </>
           )}
         />
-
       </View>
 
       <View style={styles.inputRow}>

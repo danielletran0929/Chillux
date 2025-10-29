@@ -15,6 +15,7 @@ import Settings from './screens/Settings';
 import ChangeEmail from './screens/ChangeEmail';
 import ChangePassword from './screens/ChangePassword';
 import ChangeUsername from './screens/ChangeUsername';
+import EditProfile from './screens/EditProfile';
 
 const Stack = createStackNavigator();
 
@@ -52,10 +53,13 @@ export default function App() {
           <Stack.Screen name="CreatePost" component={CreatePost} />
           <Stack.Screen name="Comments" component={Comments} />
           <Stack.Screen name="Profile" component={Profile} />
-          <Stack.Screen name="Settings" component={Settings} />
+          <Stack.Screen name="Settings">
+            {props => <Settings {...props} setLoggedIn={setLoggedIn} />}
+          </Stack.Screen>
           <Stack.Screen name="ChangeEmail" component={ChangeEmail} />
           <Stack.Screen name="ChangePassword" component={ChangePassword} />
           <Stack.Screen name="ChangeUsername" component={ChangeUsername} />
+          <Stack.Screen name="EditProfile" component={EditProfile} />
         </>
       ) : (
         <>

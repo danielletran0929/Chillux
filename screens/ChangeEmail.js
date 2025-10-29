@@ -8,12 +8,25 @@ export default function ChangeEmail({ navigation }) {
   const [email, setEmail] = useState('');
 
   const saveEmail = async () => {
-    if (!email.includes('@')) return Alert.alert('Invalid Email', 'Please enter a valid email.');
+    if (!email.includes('@')) return Alert.alert('Invalid Email', 'Enter a valid email.');
+
+    const usersRaw = await AsyncStorage.getItem('users');
+    const users = usersRaw ? JSON.parse(usersRaw) : [];
+
+    if (users.some(u => u.email === email)) {
+      return Alert.alert('Error', 'Email already in use.');
+    }
+
     const userRaw = await AsyncStorage.getItem('currentUser');
     if (!userRaw) return;
     const user = JSON.parse(userRaw);
+
     user.email = email;
+
+    const updatedUsers = users.map(u => u.id === user.id ? user : u);
+    await AsyncStorage.setItem('users', JSON.stringify(updatedUsers));
     await AsyncStorage.setItem('currentUser', JSON.stringify(user));
+
     Alert.alert('Success', 'Email updated!');
     navigation.goBack();
   };

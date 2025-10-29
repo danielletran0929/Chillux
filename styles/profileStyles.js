@@ -66,21 +66,40 @@ export default function createStyles() {
     },
 
     // Friends list
-    friendImg: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-    },
     friendItem: {
-      margin: 3,
+      width: '48%',
+      marginBottom: 10,
+      aspectRatio: 1,
+      borderRadius: 10,
+      overflow: 'hidden',
+    },
+    friendImg: {
+      width: '100%',
+      height: '100%',
+      resizeMode: 'cover',
+    },
+    viewAllFriendsBtn: {
+      width: '100%',
+      marginTop: 5,
+    },
+    viewAllFriendsText: {
+      textAlign: 'center',
+      color: '#0571d3',
+      fontWeight: 'bold',
     },
 
-    // Uploaded gallery
-    galleryImg: {
+    // Gallery
+    galleryItem: {
       width: '48%',
+      marginBottom: 10,
       aspectRatio: 1,
-      margin: '1%',
-      borderRadius: 8,
+      borderRadius: 10,
+      overflow: 'hidden',
+    },
+    galleryImg: {
+      width: '100%',
+      height: '100%',
+      resizeMode: 'cover',
     },
 
     // Posts
@@ -139,14 +158,19 @@ export default function createStyles() {
     },
     commentText: { color: theme.textColor, fontSize: 12 },
 
-    // Friends & gallery row
+    // Friends & gallery container row
     friendsGalleryRow: {
       flexDirection: 'row',
+      justifyContent: 'space-between',
       marginTop: 15,
       paddingHorizontal: 10,
     },
-    friendsContainer: { flex: 1, marginRight: 5 },
-    galleryContainer: { flex: 1, marginLeft: 5 },
-    galleryGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+    friendsContainer: { flex: 1, marginRight: 10 },
+    galleryContainer: { flex: 1, marginLeft: 10 },
+    friendsGalleryGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+    },
   });
 }

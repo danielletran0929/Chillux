@@ -6,13 +6,12 @@ import {
   TouchableOpacity,
   ScrollView,
   FlatList,
-  TextInput,
-  TouchableWithoutFeedback,
   Keyboard,
+  TouchableWithoutFeedback,
   Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as ImagePicker from 'expo-image-picker';
+import { useFocusEffect } from '@react-navigation/native';
 import createStyles from '../styles/profileStyles';
 import PostCard from '../components/PostCard';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -20,14 +19,14 @@ import Icon from 'react-native-vector-icons/Ionicons';
 export default function Profile({ navigation, route }) {
   const { userId } = route.params;
 
-  const [user, setUser] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [posts, setPosts] = useState([]);
+  const [user, setUser] = useState(null); // viewed user
+  const [currentUser, setCurrentUser] = useState(null); // logged-in session
+  const [posts, setPosts] = useState([]); // posts filtered to viewed user
   const [uploadedPictures, setUploadedPictures] = useState([]);
-  const [friends, setFriends] = useState([]);
+  const [friends, setFriends] = useState([]); // friends for viewed user
   const [isOwnProfile, setIsOwnProfile] = useState(false);
 
-  // Emoji & comment states
+  // Emoji & comment states (used for PostCard callbacks)
   const [customEmojis, setCustomEmojis] = useState([]);
   const [emojiOptions, setEmojiOptions] = useState([]);
   const [activePostId, setActivePostId] = useState(null);
@@ -35,18 +34,6 @@ export default function Profile({ navigation, route }) {
   const [commentText, setCommentText] = useState('');
 
   const defaultEmojis = ['👍', '😂', '🔥', '❤️', '😮'];
-  const defaultTheme = {
-    pageBackground: '#eef2f5',
-    headerBackground: '#38b6ff',
-    usernameColor: '#333',
-    textColor: '#222',
-    postBackground: '#fff',
-    commentBackground: '#eee',
-    buttonBackground: '#0571d3',
-    buttonTextColor: '#fff',
-    reactionTextColor: '#0571d3',
-    emojiPopupBackground: '#fff',
-  };
 
   const styles = createStyles();
 
@@ -73,192 +60,328 @@ export default function Profile({ navigation, route }) {
     return [...new Set(emojiList)];
   }, []);
 
-  useEffect(() => {
-    async function loadUserData() {
-      const currentUserRaw = await AsyncStorage.getItem('currentUser');
-      const postsRaw = await AsyncStorage.getItem('posts');
-      const customEmojisRaw = await AsyncStorage.getItem('customEmojis');
-      const friendsRaw = await AsyncStorage.getItem('friends');
-
-      if (currentUserRaw) {
-        const parsedUser = JSON.parse(currentUserRaw);
-        setCurrentUser(parsedUser);
-        setIsOwnProfile(parsedUser.id === userId);
-      }
-
-      if (currentUserRaw && JSON.parse(currentUserRaw).id === userId) {
-        setUser(JSON.parse(currentUserRaw));
-      } else {
-        setUser({
-          id: userId,
-          username: 'Other User',
-          profilePic: null,
-          coverPhoto: null,
-          bio: 'This is their bio',
-        });
-      }
-
-      const initialFriends = friendsRaw ? JSON.parse(friendsRaw) : [
-        { id: '1', profilePic: null },
-        { id: '2', profilePic: null },
-        { id: '3', profilePic: null },
-      ];
-      setFriends(initialFriends);
-
-      const picsRaw = await AsyncStorage.getItem(`uploadedPictures-${userId}`);
-      setUploadedPictures(picsRaw ? JSON.parse(picsRaw) : []);
-
-      const parsedPosts = postsRaw ? JSON.parse(postsRaw) : [];
-      setPosts(parsedPosts.filter(p => p.userId === userId));
-
-      const parsedCustom = customEmojisRaw ? JSON.parse(customEmojisRaw) : [];
-      setCustomEmojis(parsedCustom);
-      setEmojiOptions([...defaultEmojis, ...parsedCustom]);
-    }
-    loadUserData();
-  }, [userId]);
-
-  const pickProfilePic = async () => {
-    if (!isOwnProfile) return;
+  // Helper: update global posts array with a post update
+  const persistUpdatedPost = async (updatedPost) => {
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.7,
-      });
-      if (!result.canceled) {
-        const uri = result.assets[0].uri;
-        setUser({ ...user, profilePic: uri });
-        if (currentUser.id === user.id) {
-          await AsyncStorage.setItem(
-            'currentUser',
-            JSON.stringify({ ...currentUser, profilePic: uri })
-          );
+      const raw = await AsyncStorage.getItem('posts');
+      const allPosts = raw ? JSON.parse(raw) : [];
+      const newPosts = allPosts.map(p => (p.id === updatedPost.id ? updatedPost : p));
+      // if updated post not in allPosts (unlikely), append
+      if (!newPosts.some(p => p.id === updatedPost.id)) newPosts.push(updatedPost);
+      await AsyncStorage.setItem('posts', JSON.stringify(newPosts));
+    } catch (err) {
+      console.log('persistUpdatedPost error', err);
+    }
+  };
+
+  // Helper: update a user inside 'users' list (persist)
+  const persistUpdatedUser = async (updatedUser) => {
+    try {
+      const raw = await AsyncStorage.getItem('users');
+      const users = raw ? JSON.parse(raw) : [];
+      const newUsers = users.map(u => (u.id === updatedUser.id ? { ...u, ...updatedUser } : u));
+      if (!newUsers.some(u => u.id === updatedUser.id)) newUsers.push(updatedUser);
+      await AsyncStorage.setItem('users', JSON.stringify(newUsers));
+
+      // if currentUser is same user, update currentUser storage
+      const currentRaw = await AsyncStorage.getItem('currentUser');
+      const parsedCurrent = currentRaw ? JSON.parse(currentRaw) : null;
+      if (parsedCurrent && parsedCurrent.id === updatedUser.id) {
+        const sessionCopy = {
+          id: updatedUser.id,
+          username: updatedUser.username,
+          profilePhoto: updatedUser.profilePhoto ?? updatedUser.profilePic ?? null,
+          coverPhoto: updatedUser.coverPhoto ?? null,
+          theme: updatedUser.theme ?? null,
+        };
+        await AsyncStorage.setItem('currentUser', JSON.stringify(sessionCopy));
+        setCurrentUser(sessionCopy);
+      }
+    } catch (err) {
+      console.log('persistUpdatedUser error', err);
+    }
+  };
+
+  // load everything for profile when screen focused or userId changes
+  useFocusEffect(
+    React.useCallback(() => {
+      let mounted = true;
+      async function loadUserData() {
+        try {
+          const currentUserRaw = await AsyncStorage.getItem('currentUser');
+          const usersRaw = await AsyncStorage.getItem('users');
+          const postsRaw = await AsyncStorage.getItem('posts');
+          const customEmojisRaw = await AsyncStorage.getItem('customEmojis');
+
+          const parsedCurrent = currentUserRaw ? JSON.parse(currentUserRaw) : null;
+          const allUsers = usersRaw ? JSON.parse(usersRaw) : [];
+          const allPosts = postsRaw ? JSON.parse(postsRaw) : [];
+
+          // set session
+          if (parsedCurrent) {
+            setCurrentUser(parsedCurrent);
+            setIsOwnProfile(parsedCurrent.id === userId);
+          } else {
+            setCurrentUser(null);
+            setIsOwnProfile(false);
+          }
+
+          // locate the viewed user from users list (preferred)
+          const viewedUserFromUsers = allUsers.find(u => u.id === userId);
+          const viewedUser = viewedUserFromUsers
+            ? {
+                ...viewedUserFromUsers,
+                profilePic: viewedUserFromUsers.profilePhoto ?? viewedUserFromUsers.profilePic ?? null,
+                coverPhoto: viewedUserFromUsers.coverPhoto ?? null,
+                bio: viewedUserFromUsers.bio ?? '',
+                theme: viewedUserFromUsers.theme ?? null,
+              }
+            : // fallback minimal user (keeps backward compatibility)
+              {
+                id: userId,
+                username: 'Other User',
+                profilePic: null,
+                coverPhoto: null,
+                bio: 'This is their bio',
+              };
+
+          if (!mounted) return;
+          setUser(viewedUser);
+
+          // posts for this user (and normalize profilePic inside them to the latest stored in users)
+          const normalized = allPosts
+            .filter(p => p.userId === userId)
+            .map(p => {
+              // prefer viewedUser.profilePic if the post is by viewedUser
+              const postCopy = { ...p };
+              postCopy.profilePic = viewedUser.profilePic || postCopy.profilePic || null;
+              // normalize comment profile pictures with current users list (if we have matching users)
+              postCopy.comments = (postCopy.comments || []).map(c => {
+                const commentAuthor = allUsers.find(u => u.id === c.userId);
+                return {
+                  ...c,
+                  profilePic: commentAuthor ? (commentAuthor.profilePhoto ?? commentAuthor.profilePic ?? null) : (c.profilePic ?? null),
+                };
+              });
+              return postCopy;
+            });
+          setPosts(normalized);
+
+          // uploaded pictures stored under 'uploadedPictures-{userId}'
+          const picsRaw = await AsyncStorage.getItem(`uploadedPictures-${userId}`);
+          setUploadedPictures(picsRaw ? JSON.parse(picsRaw) : []);
+
+          // friends stored per-user under 'friends-{userId}'
+          const friendsRaw = await AsyncStorage.getItem(`friends-${userId}`);
+          setFriends(friendsRaw ? JSON.parse(friendsRaw) : []);
+
+          // custom emoji options
+          const parsedCustom = customEmojisRaw ? JSON.parse(customEmojisRaw) : [];
+          setCustomEmojis(parsedCustom);
+          setEmojiOptions([...defaultEmojis, ...parsedCustom]);
+        } catch (err) {
+          console.log('loadUserData error', err);
         }
       }
-    } catch (e) {
-      console.log('Error picking profile pic:', e);
-    }
-  };
 
+      loadUserData();
+      return () => { mounted = false; };
+    }, [userId])
+  );
+
+  // Add friend — store under both users' friend lists for a real social feel
   const handleAddFriend = async () => {
-    if (!currentUser) return;
-    if (friends.some(f => f.id === user.id)) {
-      Alert.alert('Already friends');
+    if (!currentUser) {
+      Alert.alert('Not logged in');
       return;
     }
-    const updatedFriends = [...friends, { id: user.id, profilePic: user.profilePic || null }];
-    setFriends(updatedFriends);
-    await AsyncStorage.setItem('friends', JSON.stringify(updatedFriends));
-    Alert.alert('Friend added!');
+    try {
+      // the viewed user's friend list key
+      const targetKey = `friends-${user.id}`;
+      const ownKey = `friends-${currentUser.id}`;
+
+      // update target's friend list (so when visiting them later it'll show)
+      const targetRaw = await AsyncStorage.getItem(targetKey);
+      let targetList = targetRaw ? JSON.parse(targetRaw) : [];
+      if (targetList.some(f => f.id === currentUser.id)) {
+        Alert.alert('Already friends');
+        return;
+      }
+      const newTargetList = [...targetList, { id: currentUser.id, profilePic: currentUser.profilePhoto ?? currentUser.profilePic ?? null, username: currentUser.username }];
+      await AsyncStorage.setItem(targetKey, JSON.stringify(newTargetList));
+
+      // update current user's friend list
+      const ownRaw = await AsyncStorage.getItem(ownKey);
+      let ownList = ownRaw ? JSON.parse(ownRaw) : [];
+      if (!ownList.some(f => f.id === user.id)) {
+        ownList = [...ownList, { id: user.id, profilePic: user.profilePic ?? null, username: user.username }];
+        await AsyncStorage.setItem(ownKey, JSON.stringify(ownList));
+      }
+
+      // update friends state in UI for the viewed profile
+      setFriends(newTargetList);
+
+      Alert.alert('Friend added!');
+    } catch (err) {
+      console.log('handleAddFriend error', err);
+    }
   };
 
-  const handleLike = (postId, emoji = '👍') => {
-    const updatedPosts = posts.map(post => {
-      if (post.id === postId) {
-        const likes = post.likes || {};
-        if (likes[currentUser.id]) delete likes[currentUser.id];
-        else likes[currentUser.id] = emoji;
-        return { ...post, likes };
-      }
-      return post;
-    });
-    setPosts(updatedPosts);
-    AsyncStorage.setItem('posts', JSON.stringify(updatedPosts));
+  // Like handler: update local profile posts and persist to global posts array
+  const handleLike = async (postId, emoji = '👍') => {
+    if (!currentUser) {
+      Alert.alert('Not logged in');
+      return;
+    }
+    try {
+      // update local list
+      const updatedLocal = posts.map(post => {
+        if (post.id === postId) {
+          const likes = { ...(post.likes || {}) };
+          if (likes[currentUser.id]) {
+            delete likes[currentUser.id];
+          } else {
+            likes[currentUser.id] = emoji;
+          }
+          const updated = { ...post, likes };
+          // persist updated to global posts
+          persistUpdatedPost(updated);
+          return updated;
+        }
+        return post;
+      });
+      setPosts(updatedLocal);
+    } catch (err) {
+      console.log('handleLike error', err);
+    }
   };
 
-  const handleAddComment = (postId, text) => {
-    if (!text.trim()) return;
-    const updatedPosts = posts.map(post => {
-      if (post.id === postId) {
-        const newComment = {
-          user: currentUser.username,
-          userId: currentUser.id,
-          text,
-          profilePic: currentUser.profilePic || null,
-        };
-        return { ...post, comments: [...(post.comments || []), newComment] };
-      }
-      return post;
-    });
-    setPosts(updatedPosts);
-    setCommentText('');
-    setActiveCommentPostId(null);
-    AsyncStorage.setItem('posts', JSON.stringify(updatedPosts));
+  // Add comment: update local posts and persist to global posts array
+  const handleAddComment = async (postId, text) => {
+    if (!currentUser) {
+      Alert.alert('Not logged in');
+      return;
+    }
+    if (!text || !text.trim()) return;
+    try {
+      const updatedLocal = posts.map(post => {
+        if (post.id === postId) {
+          const newComment = {
+            user: currentUser.username,
+            userId: currentUser.id,
+            text,
+            profilePic: currentUser.profilePhoto ?? currentUser.profilePic ?? null,
+            time: new Date().toISOString(),
+          };
+          const updated = { ...post, comments: [...(post.comments || []), newComment] };
+          persistUpdatedPost(updated);
+          return updated;
+        }
+        return post;
+      });
+      setPosts(updatedLocal);
+      setCommentText('');
+      setActiveCommentPostId(null);
+    } catch (err) {
+      console.log('handleAddComment error', err);
+    }
   };
+
+  // When returning from EditProfile, EditProfile should have saved the updated user into 'users' and into 'currentUser' if it's the session user.
+  // We already reload on focus above, so changes will reflect automatically.
 
   if (!user) return null;
 
   return (
     <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
       <ScrollView style={styles.pageContainer}>
+        {/* BACK BUTTON */}
+        <TouchableOpacity
+          style={{ position: 'absolute', top: 40, left: 15, zIndex: 10 }}
+          onPress={() => navigation.goBack()}
+        >
+          <Icon name="arrow-back" size={28} color="#fff" />
+        </TouchableOpacity>
+
+        {/* Cover Photo */}
         <Image
           source={user.coverPhoto ? { uri: user.coverPhoto } : require('../assets/cover_photo.png')}
           style={styles.coverPhoto}
         />
 
         <View style={styles.profileRow}>
-          <TouchableOpacity onPress={pickProfilePic}>
+          {/* Profile Pic (navigate to edit if own profile) */}
+          <TouchableOpacity onPress={() => {
+            if (isOwnProfile) navigation.navigate('EditProfile', { user });
+            else navigation.navigate('Profile', { userId: user.id });
+          }}>
             <Image
               source={user.profilePic ? { uri: user.profilePic } : require('../assets/placeholder.png')}
               style={styles.profilePic}
             />
           </TouchableOpacity>
+
+          {/* Edit Profile / Add Friend Button */}
           <TouchableOpacity
             style={styles.actionBtn}
-            onPress={isOwnProfile ? null : handleAddFriend}
+            onPress={isOwnProfile ? () => navigation.navigate('EditProfile', { user }) : handleAddFriend}
           >
             <Text style={styles.actionBtnText}>
-              {isOwnProfile ? 'Edit Theme' : 'Add Friend'}
+              {isOwnProfile ? 'Edit Profile' : 'Add Friend'}
             </Text>
           </TouchableOpacity>
         </View>
 
         <Text style={styles.bioText}>{user.bio || 'No bio yet.'}</Text>
 
-        {/* Friends & Gallery stacked */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <View style={{ flex: 1, marginRight: 8 }}>
+        {/* Friends and Gallery */}
+        <View style={styles.friendsGalleryRow}>
+          {/* Friends */}
+          <View style={styles.friendsContainer}>
             <Text style={styles.sectionTitle}>Friends</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-              {friends.slice(0, 6).map((f, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  style={{ width: '48%', margin: '1%' }}
-                  onPress={() => navigation.navigate('Profile', { userId: f.id })}
-                >
-                  <Image
-                    source={f.profilePic ? { uri: f.profilePic } : require('../assets/placeholder.png')}
-                    style={{ width: '100%', aspectRatio: 1, borderRadius: 8 }}
-                  />
-                </TouchableOpacity>
-              ))}
+            <View style={styles.friendsGalleryGrid}>
+              {friends.length > 0 ? (
+                friends.slice(0, 6).map((f, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    style={styles.friendItem}
+                    onPress={() => navigation.navigate('Profile', { userId: f.id })}
+                  >
+                    <Image
+                      source={f.profilePic ? { uri: f.profilePic } : require('../assets/placeholder.png')}
+                      style={styles.friendImg}
+                    />
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <Text style={{ color: '#555', fontStyle: 'italic' }}>No friends yet</Text>
+              )}
               {friends.length > 6 && (
-                <TouchableOpacity
-                  style={{ width: '100%', marginTop: 4 }}
-                  onPress={() => navigation.navigate('FriendsList')}
-                >
-                  <Text style={{ textAlign: 'center', color: '#0571d3' }}>
-                    View all {friends.length} friends
-                  </Text>
+                <TouchableOpacity style={styles.viewAllFriendsBtn}>
+                  <Text style={styles.viewAllFriendsText}>View all {friends.length} friends</Text>
                 </TouchableOpacity>
               )}
             </View>
           </View>
 
-          <View style={{ flex: 1, marginLeft: 8 }}>
+          {/* Gallery */}
+          <View style={styles.galleryContainer}>
             <Text style={styles.sectionTitle}>Gallery</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-              {uploadedPictures.slice(0, 6).map((uri, idx) => (
-                <Image
-                  key={idx}
-                  source={{ uri }}
-                  style={{ width: '48%', aspectRatio: 1, margin: '1%', borderRadius: 8 }}
-                />
-              ))}
+            <View style={styles.friendsGalleryGrid}>
+              {uploadedPictures.length > 0 ? (
+                uploadedPictures.slice(0, 6).map((uri, idx) => (
+                  <View key={idx} style={styles.galleryItem}>
+                    <Image source={{ uri }} style={styles.galleryImg} />
+                  </View>
+                ))
+              ) : (
+                <Text style={{ color: '#555', fontStyle: 'italic' }}>No pictures uploaded</Text>
+              )}
             </View>
           </View>
         </View>
 
+        {/* Posts */}
         <FlatList
           data={posts}
           keyExtractor={(item) => item.id}
@@ -266,8 +389,8 @@ export default function Profile({ navigation, route }) {
             <PostCard
               post={item}
               currentUser={currentUser}
-              onLike={handleLike}
-              onComment={handleAddComment}
+              onLike={(postId) => handleLike(postId)}
+              onComment={(postId, text) => handleAddComment(postId, text)}
               navigation={navigation}
               showCustomThemes={true}
             />
