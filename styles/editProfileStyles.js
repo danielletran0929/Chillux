@@ -71,5 +71,64 @@ export default function createStyles() {
       fontWeight: 'bold',
       color: '#fff',
     },
+    presetButton: {
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+  borderRadius: 8,
+  marginRight: 10,
+  marginBottom: 10,
+},
+
   });
+  
 }
+// --- Theme Presets ---
+export const themePresets = {
+  default: {
+    pageBackground: '#eef2f5',
+    headerBackground: '#38b6ff',
+    buttonBackground: '#0571d3',
+    buttonTextColor: '#fff',
+    textColor: '#222',
+    postBackground: '#fff',
+    profileBorderColor: '#0571d3',
+  },
+  dark: {
+    pageBackground: '#121212',
+    headerBackground: '#1f1f1f',
+    buttonBackground: '#bb86fc',
+    buttonTextColor: '#000',
+    textColor: '#e0e0e0',
+    postBackground: '#1e1e1e',
+    profileBorderColor: '#bb86fc',
+  },
+  sunset: {
+    pageBackground: '#fff2e6',
+    headerBackground: '#ff7f50',
+    buttonBackground: '#ff4500',
+    buttonTextColor: '#fff',
+    textColor: '#4b2e2e',
+    postBackground: '#ffe5d4',
+    profileBorderColor: '#ff6347',
+  },
+  mint: {
+    pageBackground: '#e6fff7',
+    headerBackground: '#2ecc71',
+    buttonBackground: '#27ae60',
+    buttonTextColor: '#fff',
+    textColor: '#145a32',
+    postBackground: '#d4f7e3',
+    profileBorderColor: '#27ae60',
+  },
+  pastel: {
+    pageBackground: '#fff0f5',
+    headerBackground: '#f7a1c4',
+    buttonBackground: '#f06292',
+    buttonTextColor: '#fff',
+    textColor: '#4b2e2e',
+    postBackground: '#ffe6f0',
+    profileBorderColor: '#f06292',
+  },
+  
+};
+

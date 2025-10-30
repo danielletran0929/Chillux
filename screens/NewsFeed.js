@@ -9,7 +9,6 @@ import {
   ScrollView,
   TextInput,
   TouchableWithoutFeedback,
-  Keyboard,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -18,13 +17,14 @@ import createStyles from '../styles/newsFeedStyles';
 
 export default function NewsFeed({ navigation, setLoggedIn }) {
   const [posts, setPosts] = useState([]);
-  const [users, setUsers] = useState([]); // canonical users list
+  const [users, setUsers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+  const [theme, setTheme] = useState({});
   const [customEmojis, setCustomEmojis] = useState([]);
   const [emojiOptions, setEmojiOptions] = useState([]);
   const [showEmojiPopup, setShowEmojiPopup] = useState(false);
-  const [activePostId, setActivePostId] = useState(null);
   const [showAddEmojiModal, setShowAddEmojiModal] = useState(false);
+  const [activePostId, setActivePostId] = useState(null);
   const [commentText, setCommentText] = useState('');
   const [activeCommentPostId, setActiveCommentPostId] = useState(null);
   const [showCustomThemes, setShowCustomThemes] = useState(true);
@@ -35,23 +35,41 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
   const defaultTheme = {
     pageBackground: '#eef2f5',
     headerBackground: '#38b6ff',
-    usernameColor: '#333',
-    textColor: '#222',
-    postBackground: '#fff',
-    commentBackground: '#eee',
     buttonBackground: '#0571d3',
     buttonTextColor: '#fff',
-    reactionTextColor: '#0571d3',
-    emojiPopupBackground: '#fff',
+    textColor: '#222',
+    postBackground: '#fff',
+    profileBorderColor: '#0571d3',
+    profileBorderWidth: 2,
   };
 
-  // helper to extract avatar from various possible user property names
+  // Load current user's theme
+  useFocusEffect(
+    React.useCallback(() => {
+      async function loadTheme() {
+        try {
+          const savedUser = await AsyncStorage.getItem('currentUser');
+          if (savedUser) {
+            const parsed = JSON.parse(savedUser);
+            setTheme(parsed.theme || {});
+            setCurrentUser(parsed);
+          }
+        } catch (err) {
+          console.log('Load Theme Error:', err);
+        }
+      }
+      loadTheme();
+    }, [])
+  );
+
+  const mergedTheme = { ...defaultTheme, ...theme };
+  const styles = createStyles(mergedTheme);
+
   const getAvatar = (u) =>
     u?.profilePic ?? u?.profilePhoto ?? u?.profilePhotoUrl ?? u?.avatarUrl ?? null;
-
-  // helper to extract username field consistently
   const getUsername = (u) => u?.username ?? u?.name ?? 'User';
 
+  // Generate emoji list once
   const allEmojis = useMemo(() => {
     const emojiList = [];
     const emojiRanges = [
@@ -72,105 +90,60 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
     return [...new Set(emojiList)];
   }, []);
 
-  // normalize posts + comments to use canonical users list
+  // Load posts + users + emojis
   useFocusEffect(
     React.useCallback(() => {
       let cancelled = false;
-      async function loadAll() {
+      async function loadData() {
         try {
-          const [userDataRaw, postsRaw, usersRaw, customEmojisRaw] = await Promise.all([
-            AsyncStorage.getItem('currentUser'),
+          const [postsRaw, usersRaw, customRaw] = await Promise.all([
             AsyncStorage.getItem('posts'),
             AsyncStorage.getItem('users'),
             AsyncStorage.getItem('customEmojis'),
           ]);
 
           const parsedUsers = usersRaw ? JSON.parse(usersRaw) : [];
-          setUsers(parsedUsers);
-
-          // Resolve session currentUser: prefer currentUser stored, but if it's only id,
-          // try to find full record in users list.
-          const sess = userDataRaw ? JSON.parse(userDataRaw) : null;
-          let resolvedSession = sess;
-          if (sess && sess.id && (!sess.username || !getAvatar(sess))) {
-            const found = parsedUsers.find((u) => u.id === sess.id);
-            if (found) {
-              // build a lightweight session object but keep canonical fields
-              resolvedSession = {
-                id: found.id,
-                username: getUsername(found),
-                profilePic: getAvatar(found),
-                // keep other session props if needed
-                ...sess,
-              };
-            }
-          } else if (sess) {
-            // ensure canonical names
-            resolvedSession = {
-              ...sess,
-              username: sess.username ?? getUsername(parsedUsers.find(u => u.id === sess.id) ?? {}),
-              profilePic: sess.profilePic ?? getAvatar(parsedUsers.find(u => u.id === sess.id) ?? {}),
-            };
-          }
-          setCurrentUser(resolvedSession);
-
           const parsedPosts = postsRaw ? JSON.parse(postsRaw) : [];
 
-          // normalize: ensure each post and its comments use canonical username & avatar when available
+          // Merge each post with its owner's latest theme + info
           const normalized = parsedPosts.map((post) => {
             const owner = parsedUsers.find((u) => u.id === post.userId);
-            const normalizedPost = {
+            return {
               ...post,
-              user: post.user ?? getUsername(owner) ?? 'User',
-              profilePic: getAvatar(owner) ?? post.profilePic ?? null,
-              theme: post.theme ?? defaultTheme,
+              user: post.user ?? getUsername(owner),
+              profilePic: getAvatar(owner) ?? post.profilePic,
+              theme: owner?.theme ?? post.theme ?? defaultTheme, // ✅ use owner’s latest theme
               comments: (post.comments || []).map((c) => {
                 const commentOwner = parsedUsers.find((u) => u.id === c.userId);
                 return {
                   ...c,
-                  user: c.user ?? getUsername(commentOwner) ?? 'User',
-                  profilePic: getAvatar(commentOwner) ?? c.profilePic ?? null,
+                  user: c.user ?? getUsername(commentOwner),
+                  profilePic: getAvatar(commentOwner) ?? c.profilePic,
                 };
               }),
             };
-            return normalizedPost;
           });
 
           if (cancelled) return;
+          setUsers(parsedUsers);
           setPosts(normalized);
-
-          // Persist normalized posts back so next loads are consistent
-          await AsyncStorage.setItem('posts', JSON.stringify(normalized));
-
-          const parsedCustom = customEmojisRaw ? JSON.parse(customEmojisRaw) : [];
+          const parsedCustom = customRaw ? JSON.parse(customRaw) : [];
           setCustomEmojis(parsedCustom);
           setEmojiOptions([...defaultEmojis, ...parsedCustom]);
         } catch (err) {
-          console.log('NewsFeed loadAll error', err);
+          console.log('Load Data Error:', err);
         }
       }
-      loadAll();
+      loadData();
       return () => {
         cancelled = true;
       };
     }, [])
   );
 
-  const handleLogout = async () => {
-    await AsyncStorage.removeItem('isLoggedIn');
-    if (currentUser) await AsyncStorage.setItem('lastLoggedInUser', JSON.stringify(currentUser.id));
-    if (setLoggedIn) setLoggedIn(false);
-    // navigate back to Login and reset nav so user can't go back
-    navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-  };
-
   const persistPosts = async (updatedPosts) => {
     setPosts(updatedPosts);
-    try {
-      await AsyncStorage.setItem('posts', JSON.stringify(updatedPosts));
-    } catch (err) {
-      console.log('persistPosts error', err);
-    }
+    await AsyncStorage.setItem('posts', JSON.stringify(updatedPosts));
   };
 
   const toggleLike = async (postId, emoji = '👍') => {
@@ -187,14 +160,6 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
     await persistPosts(updated);
   };
 
-  const saveCustomEmoji = async (emoji) => {
-    if (!emoji || defaultEmojis.includes(emoji) || customEmojis.includes(emoji)) return;
-    const updated = [...customEmojis, emoji];
-    setCustomEmojis(updated);
-    setEmojiOptions([...defaultEmojis, ...updated]);
-    await AsyncStorage.setItem('customEmojis', JSON.stringify(updated));
-  };
-
   const groupedReactions = (likes) => {
     if (!likes) return [];
     const counts = {};
@@ -207,10 +172,10 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
     const updated = posts.map((post) => {
       if (post.id === postId) {
         const newComment = {
-          user: currentUser.username ?? getUsername(users.find(u => u.id === currentUser.id) ?? {}),
+          user: currentUser.username,
           userId: currentUser.id,
           text,
-          profilePic: currentUser.profilePic ?? getAvatar(users.find(u => u.id === currentUser.id) ?? {}),
+          profilePic: currentUser.profilePic,
           time: new Date().toISOString(),
         };
         return { ...post, comments: [...(post.comments || []), newComment] };
@@ -223,8 +188,9 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
   };
 
   const renderPost = ({ item }) => {
-    const postTheme = showCustomThemes ? item.theme || defaultTheme : defaultTheme;
+    const postTheme = showCustomThemes ? { ...mergedTheme, ...(item.theme || {}) } : mergedTheme;
     const postStyles = createStyles(postTheme);
+
     const reactions = groupedReactions(item.likes);
     const userReacted = item.likes?.[currentUser?.id];
     const comments = item.comments || [];
@@ -239,10 +205,10 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
               style={postStyles.userImgPlaceholder}
             />
           </TouchableOpacity>
-
           <TouchableOpacity
             style={{ marginLeft: 8 }}
-            onPress={() => navigation.navigate('Profile', { userId: item.userId })}>
+            onPress={() => navigation.navigate('Profile', { userId: item.userId })}
+          >
             <Text style={postStyles.username}>{item.user}</Text>
             <Text style={postStyles.time}>{item.time}</Text>
           </TouchableOpacity>
@@ -264,7 +230,8 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
             onLongPress={() => {
               setActivePostId(item.id);
               setShowEmojiPopup(true);
-            }}>
+            }}
+          >
             <Text style={postStyles.actionText}>
               {userReacted ? '❌ Remove' : '👍 Like'} {item.likes ? Object.keys(item.likes).length : ''}
             </Text>
@@ -274,7 +241,8 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
             onPress={() => {
               setActiveCommentPostId(showInput ? null : item.id);
               if (!showInput) setCommentText('');
-            }}>
+            }}
+          >
             <Text style={postStyles.actionText}>💬 Comment</Text>
           </TouchableOpacity>
         </View>
@@ -290,29 +258,49 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
         )}
 
         {comments.length > 0 && (
-          <View style={postStyles.commentsContainer}>
-            {comments.slice(0, 2).map((c, i) => (
-              <View style={postStyles.commentRow} key={i}>
-                <TouchableOpacity onPress={() => navigation.navigate('Profile', { userId: c.userId })}>
-                  <Image source={c.profilePic ? { uri: c.profilePic } : require('../assets/placeholder.png')} style={postStyles.profilePic} />
-                </TouchableOpacity>
-                <TouchableOpacity style={postStyles.commentBubble} onPress={() => navigation.navigate('Profile', { userId: c.userId })}>
-                  <Text style={postStyles.commentUser}>{c.user}:</Text>
-                  <Text style={postStyles.commentText}>{c.text}</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-            {comments.length > 2 && (
-              <TouchableOpacity onPress={() => navigation.navigate('Comments', { postId: item.id })}>
-                <Text style={postStyles.viewAllCommentsText}>View all {comments.length} comments</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
+  <View style={postStyles.commentsContainer}>
+    {comments.slice(0, 2).map((c, i) => (
+      <View style={postStyles.commentRow} key={i}>
+        <TouchableOpacity onPress={() => navigation.navigate('Profile', { userId: c.userId })}>
+          <Image
+            source={c.profilePic ? { uri: c.profilePic } : require('../assets/placeholder.png')}
+            style={postStyles.profilePic}
+          />
+        </TouchableOpacity>
+        <View style={postStyles.commentBubble}>
+          <Text style={postStyles.commentUser}>{c.user}:</Text>
+          <Text style={postStyles.commentText}>{c.text}</Text>
+        </View>
+      </View>
+    ))}
+
+    {comments.length > 2 && (
+      <TouchableOpacity
+        onPress={() =>
+          navigation.navigate('Comments', {
+            postId: item.id,
+            postOwner: item.user,
+            postTheme: item.theme || mergedTheme,
+          })
+        }
+      >
+        <Text style={postStyles.viewAllCommentsText}>
+          View all {comments.length} comments
+        </Text>
+      </TouchableOpacity>
+    )}
+  </View>
+)}
+
 
         {showInput && (
           <View style={postStyles.commentInputRow}>
-            <TextInput style={postStyles.commentInput} placeholder="Write a comment..." value={commentText} onChangeText={setCommentText} />
+            <TextInput
+              style={postStyles.commentInput}
+              placeholder="Write a comment..."
+              value={commentText}
+              onChangeText={setCommentText}
+            />
             <TouchableOpacity onPress={() => addComment(item.id, commentText)}>
               <Text style={postStyles.commentBtnText}>Post</Text>
             </TouchableOpacity>
@@ -322,40 +310,43 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
     );
   };
 
-  const pageStyles = createStyles(defaultTheme);
-
   return (
     <TouchableWithoutFeedback onPress={() => setActiveCommentPostId(null)}>
-      <View style={pageStyles.pageContainer}>
-        <View style={pageStyles.header}>
-          <Image source={require('../assets/logo.png')} style={pageStyles.logo} />
-
-          <View style={pageStyles.headerRight}>
+      <View style={styles.pageContainer}>
+        <View style={styles.header}>
+          <Image source={require('../assets/logo.png')} style={styles.logo} />
+          <View style={styles.headerRight}>
             <TouchableOpacity
-              style={pageStyles.userInfoRow}
-              onPress={() => navigation.navigate('Profile', { userId: currentUser?.id })}>
+              style={styles.userInfoRow}
+              onPress={() => navigation.navigate('Profile', { userId: currentUser?.id })}
+            >
               <Image
                 source={currentUser?.profilePic ? { uri: currentUser.profilePic } : require('../assets/placeholder.png')}
-                style={pageStyles.headerProfilePic}
+                style={styles.headerProfilePic}
               />
-              <Text style={pageStyles.usernameHeader}>{currentUser?.username || 'User'}</Text>
+              <Text style={styles.usernameHeader}>{currentUser?.username || 'User'}</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity style={{ paddingHorizontal: 8 }} onPress={() => navigation.navigate('Settings')}>
-              <Icon name="settings-outline" size={28} color={pageStyles.usernameHeader.color} />
+            <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
+              <Icon name="settings-outline" size={28} color={styles.usernameHeader.color} />
             </TouchableOpacity>
           </View>
         </View>
 
-        <TouchableOpacity style={pageStyles.createPostBtn} onPress={() => navigation.navigate('CreatePost')}>
-          <Text style={pageStyles.createPostText}>➕ Create Post</Text>
+        <TouchableOpacity style={styles.createPostBtn} onPress={() => navigation.navigate('CreatePost')}>
+          <Text style={styles.createPostText}>➕ Create Post</Text>
         </TouchableOpacity>
 
-        <FlatList data={posts} keyExtractor={(item) => item.id} renderItem={renderPost} contentContainerStyle={{ paddingBottom: 80 }} />
+        <FlatList
+          data={posts}
+          keyExtractor={(item) => item.id}
+          renderItem={renderPost}
+          contentContainerStyle={{ paddingBottom: 80 }}
+        />
 
+        {/* Emoji Popup */}
         <Modal transparent visible={showEmojiPopup} animationType="fade">
-          <TouchableOpacity style={pageStyles.modalBackdrop} onPress={() => setShowEmojiPopup(false)}>
-            <View style={pageStyles.emojiPopup}>
+          <TouchableOpacity style={styles.modalBackdrop} onPress={() => setShowEmojiPopup(false)}>
+            <View style={styles.emojiPopup}>
               {[...emojiOptions, addButton].map((emoji, idx) => (
                 <TouchableOpacity
                   key={idx}
@@ -367,23 +358,41 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
                       toggleLike(activePostId, emoji);
                       setShowEmojiPopup(false);
                     }
-                  }}>
-                  <Text style={pageStyles.emojiPopupText}>{emoji.add ? '➕' : emoji}</Text>
+                  }}
+                >
+                  <Text style={styles.emojiPopupText}>{emoji.add ? '➕' : emoji}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           </TouchableOpacity>
         </Modal>
 
+        {/* Add Emoji Modal */}
         <Modal transparent visible={showAddEmojiModal} animationType="slide">
-          <TouchableOpacity style={pageStyles.modalBackdrop} onPress={() => setShowAddEmojiModal(false)}>
-            <View style={pageStyles.bigEmojiSheet}>
-              <Text style={pageStyles.bigEmojiTitle}>Pick any emoji</Text>
-              <FlatList data={allEmojis} keyExtractor={(i) => i} numColumns={6} renderItem={({ item }) => (
-                <TouchableOpacity onPress={async () => { await saveCustomEmoji(item); toggleLike(activePostId, item); setShowAddEmojiModal(false); }}>
-                  <Text style={pageStyles.bigEmojiText}>{item}</Text>
-                </TouchableOpacity>
-              )} />
+          <TouchableOpacity style={styles.modalBackdrop} onPress={() => setShowAddEmojiModal(false)}>
+            <View style={styles.bigEmojiSheet}>
+              <Text style={styles.bigEmojiTitle}>Pick any emoji</Text>
+              <FlatList
+                data={allEmojis}
+                keyExtractor={(i) => i}
+                numColumns={6}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    onPress={async () => {
+                      if (!defaultEmojis.includes(item) && !customEmojis.includes(item)) {
+                        const updated = [...customEmojis, item];
+                        setCustomEmojis(updated);
+                        setEmojiOptions([...defaultEmojis, ...updated]);
+                        await AsyncStorage.setItem('customEmojis', JSON.stringify(updated));
+                      }
+                      await toggleLike(activePostId, item);
+                      setShowAddEmojiModal(false);
+                    }}
+                  >
+                    <Text style={styles.bigEmojiText}>{item}</Text>
+                  </TouchableOpacity>
+                )}
+              />
               <TouchableOpacity onPress={() => setShowAddEmojiModal(false)}>
                 <Text style={{ fontWeight: 'bold' }}>Close</Text>
               </TouchableOpacity>

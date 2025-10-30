@@ -1,22 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  Alert
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import createStyles from '../styles/createPostStyles';
 
-export default function CreatePost({ navigation, theme = {} }) {
-  const styles = createStyles(theme);
+export default function CreatePost({ navigation }) {
   const [text, setText] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
   const [images, setImages] = useState([]);
+  const [theme, setTheme] = useState({});
 
   useEffect(() => {
     async function loadUser() {
       const savedUser = await AsyncStorage.getItem('currentUser');
-      if (savedUser) setCurrentUser(JSON.parse(savedUser));
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        setCurrentUser(parsed);
+        setTheme(parsed.theme || {}); // ✅ apply theme from user
+      }
     }
     loadUser();
   }, []);
+
+  const styles = createStyles(theme);
 
   const pickImages = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -44,11 +58,14 @@ export default function CreatePost({ navigation, theme = {} }) {
     const newPost = {
       id: Date.now().toString(),
       userId: currentUser.id,
+      user: currentUser.username,
+      time: 'Just now',
       text: text.trim(),
-      images,
-      comments: [],
       likes: {},
-      timestamp: Date.now(),
+      images,
+      profilePic: currentUser.profilePic || null,
+      comments: [],
+      theme: currentUser.theme || {}, // ✅ keep theme in the post itself
     };
 
     await AsyncStorage.setItem('posts', JSON.stringify([newPost, ...posts]));
@@ -58,15 +75,15 @@ export default function CreatePost({ navigation, theme = {} }) {
   };
 
   return (
-    <ScrollView style={styles.pageContainer}>
+    <ScrollView style={[styles.pageContainer, { backgroundColor: theme.pageBackground || '#f2f2f2' }]}>
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-        <Text style={styles.backButtonText}>⬅ Back</Text>
+        <Text style={[styles.backButtonText, { color: theme.textColor || '#000' }]}>⬅ Back</Text>
       </TouchableOpacity>
 
-      <Text style={styles.headerText}>Create Post</Text>
+      <Text style={[styles.headerText, { color: theme.headerTextColor || '#222' }]}>Create Post</Text>
 
       <TextInput
-        style={styles.postInput}
+        style={[styles.postInput, { color: theme.textColor || '#000', borderColor: theme.borderColor || '#ccc' }]}
         placeholder="Write something..."
         value={text}
         onChangeText={setText}
@@ -74,8 +91,11 @@ export default function CreatePost({ navigation, theme = {} }) {
         placeholderTextColor={theme.placeholderTextColor || '#888'}
       />
 
-      <TouchableOpacity style={styles.postButton} onPress={pickImages}>
-        <Text style={styles.postBtnText}>📸 Add Images</Text>
+      <TouchableOpacity
+        style={[styles.postButton, { backgroundColor: theme.buttonBackground || '#0571d3' }]}
+        onPress={pickImages}
+      >
+        <Text style={[styles.postBtnText, { color: theme.buttonTextColor || '#fff' }]}>📸 Add Images</Text>
       </TouchableOpacity>
 
       {images.length > 0 && (
@@ -87,12 +107,15 @@ export default function CreatePost({ navigation, theme = {} }) {
       )}
 
       <TouchableOpacity
-        style={[styles.postButton,
-        (!text.trim() && images.length === 0) && { opacity: 0.4 }]}
+        style={[
+          styles.postButton,
+          { backgroundColor: theme.buttonBackground || '#0571d3' },
+          (!text.trim() && images.length === 0) && { opacity: 0.4 }
+        ]}
         disabled={!text.trim() && images.length === 0}
         onPress={handlePost}
       >
-        <Text style={styles.postBtnText}>Post</Text>
+        <Text style={[styles.postBtnText, { color: theme.buttonTextColor || '#fff' }]}>Post</Text>
       </TouchableOpacity>
     </ScrollView>
   );

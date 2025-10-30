@@ -3,6 +3,8 @@ import { View, Text, TextInput, Image, TouchableOpacity, ScrollView, StyleSheet 
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { themePresets } from '../styles/editProfileStyles'; // adjust path as needed
+
 
 export default function EditProfile({ navigation, route }) {
   const { user } = route.params;
@@ -12,20 +14,17 @@ export default function EditProfile({ navigation, route }) {
   const [bio, setBio] = useState(user.bio);
   const [backgroundImage, setBackgroundImage] = useState(user.backgroundImage || null);
 
-  const [borderColor, setBorderColor] = useState(user.theme?.borderColor || '#000');
-  const [cardStyle, setCardStyle] = useState(user.theme?.cardStyle || 'rounded');
-  const [textColor, setTextColor] = useState(user.theme?.textColor || '#000');
+  // Theme fields
+  const [pageBackground, setPageBackground] = useState(user.theme?.pageBackground || '#eef2f5');
+  const [headerBackground, setHeaderBackground] = useState(user.theme?.headerBackground || '#38b6ff');
+  const [buttonBackground, setButtonBackground] = useState(user.theme?.buttonBackground || '#0571d3');
+  const [textColor, setTextColor] = useState(user.theme?.textColor || '#222');
+  const [postBackground, setPostBackground] = useState(user.theme?.postBackground || '#fff');
+  const [profileBorderColor, setProfileBorderColor] = useState(user.theme?.profileBorderColor || '#0571d3');
+  const [buttonTextColor, setButtonTextColor] = useState(user.theme?.buttonTextColor || '#fff');
 
-  const [appBackgroundColor, setAppBackgroundColor] = useState(user.theme?.appBackgroundColor || '#eef2f5');
-  const [postBackgroundColor, setPostBackgroundColor] = useState(user.theme?.postBackgroundColor || '#ffffff');
 
   const colorOptions = ['#000', '#ff4d4d', '#1e90ff', '#32cd32', '#9b59b6', '#edb51a', '#ffffff', '#eef2f5'];
-
-  const cardOptions = [
-    { key: 'rounded', label: 'Rounded Cards' },
-    { key: 'square', label: 'Square Clean' },
-    { key: 'shadow', label: 'Shadow Style' }
-  ];
 
   const pickImage = async (setter) => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -33,6 +32,17 @@ export default function EditProfile({ navigation, route }) {
     });
     if (!result.canceled) setter(result.assets[0].uri);
   };
+
+  const applyPreset = (preset) => {
+  setPageBackground(preset.pageBackground);
+  setHeaderBackground(preset.headerBackground);
+  setButtonBackground(preset.buttonBackground);
+  setButtonTextColor(preset.buttonTextColor);
+  setTextColor(preset.textColor);
+  setPostBackground(preset.postBackground);
+  setProfileBorderColor(preset.profileBorderColor);
+};
+
 
   const saveProfile = async () => {
     try {
@@ -43,11 +53,13 @@ export default function EditProfile({ navigation, route }) {
         bio,
         backgroundImage,
         theme: {
-          borderColor,
-          cardStyle,
+          pageBackground,
+          headerBackground,
+          buttonBackground,
+          buttonTextColor,
           textColor,
-          appBackgroundColor,
-          postBackgroundColor
+          postBackground,
+          profileBorderColor
         }
       };
 
@@ -68,22 +80,29 @@ export default function EditProfile({ navigation, route }) {
   };
 
   return (
-    <View style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ paddingTop: 60, paddingBottom: 40 }}>
-        <Text style={styles.title}>Edit Profile</Text>
+    <View style={{ flex: 1, backgroundColor: pageBackground }}>
+      <TouchableOpacity
+        style={{ position: 'absolute', top: 40, left: 15, zIndex: 10 }}
+        onPress={() => navigation.goBack()}
+      >
+        <Icon name="arrow-back" size={28} color={textColor} />
+      </TouchableOpacity>
+
+      <ScrollView contentContainerStyle={{ paddingTop: 60, paddingBottom: 40, paddingHorizontal: 20 }}>
+        <Text style={[styles.title, { color: textColor }]}>Edit Profile</Text>
 
         {/* Profile Picture */}
-        <Text style={styles.label}>Profile Picture</Text>
+        <Text style={[styles.label, { color: textColor }]}>Profile Picture</Text>
         <TouchableOpacity onPress={() => pickImage(setProfilePic)}>
           <Image
             source={profilePic ? { uri: profilePic } : require('../assets/placeholder.png')}
-            style={[styles.profileImage, { borderColor }]}
+            style={[styles.profileImage, { borderColor: profileBorderColor }]}
           />
           <Text style={{ color: textColor }}>Change</Text>
         </TouchableOpacity>
 
         {/* Cover Photo */}
-        <Text style={styles.label}>Cover Photo</Text>
+        <Text style={[styles.label, { color: textColor }]}>Cover Photo</Text>
         <TouchableOpacity onPress={() => pickImage(setCoverPhoto)}>
           <Image
             source={coverPhoto ? { uri: coverPhoto } : require('../assets/cover_photo.png')}
@@ -93,107 +112,119 @@ export default function EditProfile({ navigation, route }) {
         </TouchableOpacity>
 
         {/* Bio */}
-        <Text style={styles.label}>Bio</Text>
+        <Text style={[styles.label, { color: textColor }]}>Bio</Text>
         <TextInput
           value={bio}
           onChangeText={setBio}
           placeholder="Write your bio..."
-          style={[styles.bioInput, { borderColor, color: textColor }]}
+          style={[styles.bioInput, { borderColor: profileBorderColor, color: textColor }]}
           placeholderTextColor="#666"
         />
 
         {/* Background Image */}
-        <TouchableOpacity
-          onPress={() => pickImage(setBackgroundImage)}
-          style={styles.themeButton}
-        >
+        <TouchableOpacity onPress={() => pickImage(setBackgroundImage)} style={styles.themeButton}>
           <Text style={styles.themeButtonText}>Background Image</Text>
           <Icon name="image" size={22} color="#333" />
         </TouchableOpacity>
 
-
         {/* THEME SETTINGS */}
-        <Text style={styles.sectionTitle}>Custom Theme</Text>
+        <Text style={[styles.sectionTitle, { color: textColor }]}>Custom Theme</Text>
 
-        {/* Border Color */}
-        <Text style={styles.label}>Border Color</Text>
+        {/* Page Background */}
+        <Text style={[styles.label, { color: textColor }]}>Page Background</Text>
         <View style={styles.row}>
-          {colorOptions.map((c) => (
+          {colorOptions.map(c => (
+            <TouchableOpacity key={c + 'pg'} onPress={() => setPageBackground(c)}
+              style={[styles.colorCircle, { backgroundColor: c, borderWidth: pageBackground === c ? 3 : 1 }]} />
+          ))}
+        </View>
+
+        {/* Header Background */}
+        <Text style={[styles.label, { color: textColor }]}>Header Background</Text>
+        <View style={styles.row}>
+          {colorOptions.map(c => (
+            <TouchableOpacity key={c + 'h'} onPress={() => setHeaderBackground(c)}
+              style={[styles.colorCircle, { backgroundColor: c, borderWidth: headerBackground === c ? 3 : 1 }]} />
+          ))}
+        </View>
+
+        {/* Button Background */}
+        <Text style={[styles.label, { color: textColor }]}>Button Background</Text>
+        <View style={styles.row}>
+          {colorOptions.map(c => (
+            <TouchableOpacity key={c + 'btn'} onPress={() => setButtonBackground(c)}
+              style={[styles.colorCircle, { backgroundColor: c, borderWidth: buttonBackground === c ? 3 : 1 }]} />
+          ))}
+        </View>
+
+        {/* Button Text Color */}
+        <Text style={[styles.label, { color: textColor }]}>Button Text Color</Text>
+        <View style={styles.row}>
+          {colorOptions.map(c => (
             <TouchableOpacity
-              key={c + 'b'}
-              onPress={() => setBorderColor(c)}
-              style={[
-                styles.colorCircle,
-                { backgroundColor: c, borderWidth: borderColor === c ? 3 : 1 }
-              ]}
+              key={c + 'btntxt'}
+              onPress={() => setButtonTextColor(c)}
+              style={[styles.colorCircle, { backgroundColor: c, borderWidth: buttonTextColor === c ? 3 : 1 }]}
             />
           ))}
         </View>
+
 
         {/* Text Color */}
-        <Text style={styles.label}>Text Color</Text>
+        <Text style={[styles.label, { color: textColor }]}>Text Color</Text>
         <View style={styles.row}>
-          {colorOptions.map((c) => (
-            <TouchableOpacity
-              key={c + 't'}
-              onPress={() => setTextColor(c)}
-              style={[
-                styles.colorCircle,
-                { backgroundColor: c, borderWidth: textColor === c ? 3 : 1 }
-              ]}
-            />
-          ))}
-        </View>
-
-        {/* App Background */}
-        <Text style={styles.label}>App Background Color</Text>
-        <View style={styles.row}>
-          {colorOptions.map((c) => (
-            <TouchableOpacity
-              key={c + 'a'}
-              onPress={() => setAppBackgroundColor(c)}
-              style={[
-                styles.colorCircle,
-                { backgroundColor: c, borderWidth: appBackgroundColor === c ? 3 : 1 }
-              ]}
-            />
+          {colorOptions.map(c => (
+            <TouchableOpacity key={c + 't'} onPress={() => setTextColor(c)}
+              style={[styles.colorCircle, { backgroundColor: c, borderWidth: textColor === c ? 3 : 1 }]} />
           ))}
         </View>
 
         {/* Post Background */}
-        <Text style={styles.label}>Post Card Background</Text>
+        <Text style={[styles.label, { color: textColor }]}>Post Card Background</Text>
         <View style={styles.row}>
-          {colorOptions.map((c) => (
-            <TouchableOpacity
-              key={c + 'p'}
-              onPress={() => setPostBackgroundColor(c)}
-              style={[
-                styles.colorCircle,
-                { backgroundColor: c, borderWidth: postBackgroundColor === c ? 3 : 1 }
-              ]}
-            />
+          {colorOptions.map(c => (
+            <TouchableOpacity key={c + 'p'} onPress={() => setPostBackground(c)}
+              style={[styles.colorCircle, { backgroundColor: c, borderWidth: postBackground === c ? 3 : 1 }]} />
           ))}
         </View>
 
-        {/* Card Style */}
-        <Text style={styles.label}>Card Style</Text>
-        {cardOptions.map((option) => (
-          <TouchableOpacity
-            key={option.key}
-            onPress={() => setCardStyle(option.key)}
-            style={[
-              styles.cardOption,
-              cardStyle === option.key && styles.cardOptionActive
-            ]}
-          >
-            <Text style={{ fontWeight: 'bold' }}>{option.label}</Text>
-          </TouchableOpacity>
-        ))}
+        {/* Profile Border */}
+        <Text style={[styles.label, { color: textColor }]}>Profile Border Color</Text>
+        <View style={styles.row}>
+          {colorOptions.map(c => (
+            <TouchableOpacity key={c + 'pb'} onPress={() => setProfileBorderColor(c)}
+              style={[styles.colorCircle, { backgroundColor: c, borderWidth: profileBorderColor === c ? 3 : 1 }]} />
+          ))}
+        </View>
+
+        {/* Theme Presets */}
+<Text style={[styles.sectionTitle, { color: textColor }]}>Theme Presets</Text>
+<View style={styles.row}>
+  {Object.keys(themePresets).map((presetName) => {
+    const preset = themePresets[presetName];
+    return (
+      <TouchableOpacity
+        key={presetName}
+        onPress={() => applyPreset(preset)}
+        style={[
+          styles.presetButton,
+          { backgroundColor: preset.buttonBackground }
+        ]}
+      >
+        <Text style={{ color: preset.buttonTextColor, fontWeight: 'bold' }}>
+          {presetName.charAt(0).toUpperCase() + presetName.slice(1)}
+        </Text>
+      </TouchableOpacity>
+    );
+  })}
+</View>
+
 
         {/* Save */}
-        <TouchableOpacity onPress={saveProfile} style={styles.saveButton}>
-          <Text style={{ color: '#fff', fontWeight: 'bold' }}>Save Changes</Text>
+        <TouchableOpacity onPress={saveProfile} style={[styles.saveButton, { backgroundColor: buttonBackground }]}>
+          <Text style={{ color: buttonTextColor, fontWeight: 'bold' }}>Save Changes</Text>
         </TouchableOpacity>
+
       </ScrollView>
     </View>
   );
@@ -208,9 +239,7 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 20, fontWeight: 'bold', marginTop: 30 },
   themeButton: { flexDirection: 'row', justifyContent: 'space-between', padding: 12, backgroundColor: '#eee', borderRadius: 10, marginVertical: 10 },
   themeButtonText: { fontWeight: 'bold' },
-  saveButton: { backgroundColor: '#0571d3', padding: 15, marginTop: 30, borderRadius: 12, alignItems: 'center' },
+  saveButton: { padding: 15, marginTop: 30, borderRadius: 12, alignItems: 'center' },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 10 },
   colorCircle: { width: 32, height: 32, borderRadius: 16, borderColor: '#333' },
-  cardOption: { padding: 12, backgroundColor: '#eee', borderRadius: 8, marginTop: 10 },
-  cardOptionActive: { backgroundColor: '#cce0ff', borderColor: '#0055cc', borderWidth: 2 }
 });
