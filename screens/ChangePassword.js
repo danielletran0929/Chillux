@@ -4,27 +4,29 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import createChangeStyles from '../styles/changeStyles';
 
 export default function ChangePassword({ navigation }) {
-  const styles = createChangeStyles();
+  const [styles, setStyles] = useState(createChangeStyles());
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [storedPassword, setStoredPassword] = useState('');
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    async function loadPassword() {
+    async function loadUser() {
       const userRaw = await AsyncStorage.getItem('currentUser');
       if (!userRaw) return;
-      const user = JSON.parse(userRaw);
-      setStoredPassword(user.password || '');
+      const parsedUser = JSON.parse(userRaw);
+      setUser(parsedUser);
+      setStyles(createChangeStyles(parsedUser.theme || {}));
     }
-    loadPassword();
+    loadUser();
   }, []);
 
   const savePassword = async () => {
     if (!oldPassword || !newPassword || !confirmPassword) {
       return Alert.alert('Error', 'All fields are required.');
     }
-    if (oldPassword !== storedPassword) {
+    if (!user) return;
+    if (oldPassword !== user.password) {
       return Alert.alert('Error', 'Old password is incorrect.');
     }
     if (newPassword === oldPassword) {
@@ -33,11 +35,16 @@ export default function ChangePassword({ navigation }) {
     if (newPassword !== confirmPassword) {
       return Alert.alert('Error', 'Confirm password does not match new password.');
     }
-    const userRaw = await AsyncStorage.getItem('currentUser');
-    if (!userRaw) return;
-    const user = JSON.parse(userRaw);
-    user.password = newPassword;
-    await AsyncStorage.setItem('currentUser', JSON.stringify(user));
+
+    const updatedUser = { ...user, password: newPassword };
+
+    const usersRaw = await AsyncStorage.getItem('users');
+    const users = usersRaw ? JSON.parse(usersRaw) : [];
+    const updatedUsers = users.map(u => u.id === user.id ? updatedUser : u);
+
+    await AsyncStorage.setItem('users', JSON.stringify(updatedUsers));
+    await AsyncStorage.setItem('currentUser', JSON.stringify(updatedUser));
+
     Alert.alert('Success', 'Password updated!');
     navigation.goBack();
   };

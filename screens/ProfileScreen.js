@@ -251,25 +251,31 @@ export default function Profile({ navigation, route }) {
         />
 
         <View style={styles.profileRow}>
-          <TouchableOpacity onPress={() => {
-            if (isOwnProfile) navigation.navigate('EditProfile', { user });
-            else navigation.navigate('Profile', { userId: user.id });
-          }}>
-            <Image
-              source={user.profilePic ? { uri: user.profilePic } : require('../assets/placeholder.png')}
-              style={[styles.profilePic, { borderColor: user.theme?.profileBorderColor ?? '#fff' }]}
-            />
-          </TouchableOpacity>
+  <View style={{ alignItems: 'center' }}>
+    <TouchableOpacity onPress={() => {
+      if (isOwnProfile) navigation.navigate('EditProfile', { user });
+      else navigation.navigate('Profile', { userId: user.id });
+    }}>
+      <Image
+        source={user.profilePic ? { uri: user.profilePic } : require('../assets/placeholder.png')}
+        style={[styles.profilePic, { borderColor: user.theme?.profileBorderColor ?? '#fff' }]}
+      />
+    </TouchableOpacity>
+    <Text style={[{ marginTop: 8, fontSize: 18, fontWeight: 'bold', color: user.theme?.textColor ?? '#222' }]}>
+      {user.username}
+    </Text>
+  </View>
 
-          <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: user.theme?.buttonBackground ?? '#0571d3' }]}
-            onPress={isOwnProfile ? () => navigation.navigate('EditProfile', { user }) : handleAddFriend}
-          >
-            <Text style={[styles.actionBtnText, { color: user.theme?.buttonTextColor ?? '#fff' }]}>
-              {isOwnProfile ? 'Edit Profile' : 'Add Friend'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+  <TouchableOpacity
+    style={[styles.actionBtn, { backgroundColor: user.theme?.buttonBackground ?? '#0571d3' }]}
+    onPress={isOwnProfile ? () => navigation.navigate('EditProfile', { user }) : handleAddFriend}
+  >
+    <Text style={[styles.actionBtnText, { color: user.theme?.buttonTextColor ?? '#fff' }]}>
+      {isOwnProfile ? 'Edit Profile' : 'Add Friend'}
+    </Text>
+  </TouchableOpacity>
+</View>
+
 
         <Text style={[styles.bioText, { color: user.theme?.textColor ?? '#222' }]}>{user.bio || 'No bio yet.'}</Text>
 
@@ -315,7 +321,7 @@ export default function Profile({ navigation, route }) {
               <PostCard
                 post={item}
                 currentUser={currentUser}
-                onLike={(postId) => handleLike(postId)}
+                onLike={(postId, emoji) => handleLike(postId, emoji)}
                 onComment={(postId, text) => handleAddComment(postId, text)}
                 navigation={navigation}
                 showCustomThemes={true}

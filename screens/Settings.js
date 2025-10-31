@@ -6,11 +6,11 @@ import {
   ScrollView,
   Switch,
   Alert,
-  ImageBackground
+  ImageBackground,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import createSettingsStyles from '../styles/settingsStyles';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from 'react-native-vector-icons/Ionicons'; // ✅ replaced expo import
 
 export default function Settings({ navigation, setLoggedIn }) {
   const [theme, setTheme] = useState(null);
@@ -19,16 +19,21 @@ export default function Settings({ navigation, setLoggedIn }) {
 
   useEffect(() => {
     async function loadUserAndTheme() {
-      const savedUser = await AsyncStorage.getItem('currentUser');
-      if (savedUser) {
-        const parsed = JSON.parse(savedUser);
-        setCurrentUser(parsed);
-        setTheme(parsed.theme || {});
-      }
+      try {
+        const savedUser = await AsyncStorage.getItem('currentUser');
+        if (savedUser) {
+          const parsed = JSON.parse(savedUser);
+          setCurrentUser(parsed);
+          setTheme(parsed.theme || {});
+        }
 
-      const saved = await AsyncStorage.getItem('customThemeEnabled');
-      if (saved !== null) setCustomThemeEnabled(JSON.parse(saved));
+        const saved = await AsyncStorage.getItem('customThemeEnabled');
+        if (saved !== null) setCustomThemeEnabled(JSON.parse(saved));
+      } catch (err) {
+        console.log('Error loading settings:', err);
+      }
     }
+
     loadUserAndTheme();
   }, []);
 
@@ -40,10 +45,7 @@ export default function Settings({ navigation, setLoggedIn }) {
     await AsyncStorage.setItem('customThemeEnabled', JSON.stringify(newValue));
 
     if (currentUser) {
-      const updatedUser = {
-        ...currentUser,
-        themeEnabled: newValue
-      };
+      const updatedUser = { ...currentUser, themeEnabled: newValue };
       await AsyncStorage.setItem('currentUser', JSON.stringify(updatedUser));
       setCurrentUser(updatedUser);
     }
@@ -73,7 +75,10 @@ export default function Settings({ navigation, setLoggedIn }) {
   };
 
   const renderAccountRow = (label, screenName) => (
-    <TouchableOpacity style={styles.sectionRow} onPress={() => handleNavigate(screenName)}>
+    <TouchableOpacity
+      style={styles.sectionRow}
+      onPress={() => handleNavigate(screenName)}
+    >
       <Text style={styles.sectionText}>{label}</Text>
       <Ionicons name="chevron-forward" size={20} color="#888" />
     </TouchableOpacity>
@@ -82,7 +87,10 @@ export default function Settings({ navigation, setLoggedIn }) {
   return (
     <ImageBackground
       source={theme?.backgroundImage ? { uri: theme.backgroundImage } : null}
-      style={[styles.pageContainer, theme?.pageBackground ? { backgroundColor: theme.pageBackground } : {}]}
+      style={[
+        styles.pageContainer,
+        theme?.pageBackground ? { backgroundColor: theme.pageBackground } : {},
+      ]}
       resizeMode="cover"
     >
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
@@ -104,7 +112,9 @@ export default function Settings({ navigation, setLoggedIn }) {
           <Switch
             value={customThemeEnabled}
             onValueChange={toggleCustomTheme}
-            thumbColor={customThemeEnabled ? theme?.accentColor || '#4CAF50' : '#ccc'}
+            thumbColor={
+              customThemeEnabled ? theme?.accentColor || '#4CAF50' : '#ccc'
+            }
           />
         </View>
 

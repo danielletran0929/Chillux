@@ -8,20 +8,22 @@ export default function ForgotPasswordScreen({ navigation }) {
   const [email, setEmail] = useState('');
 
   const handleRecover = async () => {
-    const savedData = await AsyncStorage.getItem('userData');
+    const stored = await AsyncStorage.getItem('users');
 
-    if (!savedData) {
-      Alert.alert('Error', 'No registered user found');
+    if (!stored) {
+      Alert.alert('Error', 'No registered users found');
       return;
     }
 
-    const { email: savedEmail, password } = JSON.parse(savedData);
+    const users = JSON.parse(stored);
+    const found = users.find(u => u.email === email.trim());
 
-    if (email.trim() === savedEmail) {
-      Alert.alert('Your Password', `Password: ${password}`);
-    } else {
-      Alert.alert('Error', 'Email does not match registered account');
+    if (!found) {
+      Alert.alert('Error', 'No account found with that email');
+      return;
     }
+
+    Alert.alert('Password Recovery', `Your password is: ${found.password}`);
   };
 
   return (
@@ -33,7 +35,7 @@ export default function ForgotPasswordScreen({ navigation }) {
 
         <TextInput 
           style={common.input}
-          placeholder="Enter Registered Email"
+          placeholder="Enter your registered email"
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -43,7 +45,10 @@ export default function ForgotPasswordScreen({ navigation }) {
           <Text style={common.buttonText}>Recover Password</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[common.button, styles.secondaryButton]} onPress={() => navigation.navigate('Login')}>
+        <TouchableOpacity
+          style={[common.button, styles.secondaryButton]}
+          onPress={() => navigation.navigate('Login')}
+        >
           <Text style={common.buttonText}>Back to Login</Text>
         </TouchableOpacity>
       </View>

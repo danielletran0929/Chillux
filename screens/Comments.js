@@ -112,9 +112,11 @@ export default function CommentPage({ route, navigation }) {
                       },
                     ]}
                   >
+                  <TouchableOpacity onPress={() => navigation.navigate('Profile', { userId: c.userId })}>
                     <Text style={[styles.commentUser, { color: theme.textColor || '#000' }]}>
                       {item.user}:
                     </Text>
+                  </TouchableOpacity>
                     <Text style={[styles.commentText, { color: theme.textColor || '#333' }]}>
                       {item.text}
                     </Text>

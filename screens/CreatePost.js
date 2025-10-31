@@ -6,10 +6,10 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
-  Alert
+  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as ImagePicker from 'expo-image-picker';
+import { launchImageLibrary } from 'react-native-image-picker';
 import createStyles from '../styles/createPostStyles';
 
 export default function CreatePost({ navigation }) {
@@ -24,7 +24,7 @@ export default function CreatePost({ navigation }) {
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
         setCurrentUser(parsed);
-        setTheme(parsed.theme || {}); // ✅ apply theme from user
+        setTheme(parsed.theme || {});
       }
     }
     loadUser();
@@ -33,16 +33,22 @@ export default function CreatePost({ navigation }) {
   const styles = createStyles(theme);
 
   const pickImages = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
-      quality: 0.7,
-      selectionLimit: 5,
-    });
+    const options = {
+      mediaType: 'photo',
+      selectionLimit: 5, // allows multiple selection
+      includeBase64: false,
+    };
 
-    if (!result.canceled) {
-      setImages([...images, ...result.assets.map(a => a.uri)]);
-    }
+    launchImageLibrary(options, response => {
+      if (response.didCancel) return;
+      if (response.errorCode) {
+        Alert.alert('Error', response.errorMessage || 'Failed to pick images');
+        return;
+      }
+
+      const newUris = response.assets?.map(asset => asset.uri) || [];
+      setImages(prev => [...prev, ...newUris]);
+    });
   };
 
   const handlePost = async () => {
@@ -65,7 +71,7 @@ export default function CreatePost({ navigation }) {
       images,
       profilePic: currentUser.profilePic || null,
       comments: [],
-      theme: currentUser.theme || {}, // ✅ keep theme in the post itself
+      theme: currentUser.theme || {},
     };
 
     await AsyncStorage.setItem('posts', JSON.stringify([newPost, ...posts]));
@@ -110,7 +116,7 @@ export default function CreatePost({ navigation }) {
         style={[
           styles.postButton,
           { backgroundColor: theme.buttonBackground || '#0571d3' },
-          (!text.trim() && images.length === 0) && { opacity: 0.4 }
+          (!text.trim() && images.length === 0) && { opacity: 0.4 },
         ]}
         disabled={!text.trim() && images.length === 0}
         onPress={handlePost}

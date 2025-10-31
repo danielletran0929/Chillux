@@ -1,19 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import createChangeStyles from '../styles/changeStyles';
 
 export default function ChangeUsername({ navigation }) {
-  const styles = createChangeStyles();
+  const [styles, setStyles] = useState(createChangeStyles());
   const [username, setUsername] = useState('');
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    async function loadThemeAndUser() {
+      const userRaw = await AsyncStorage.getItem('currentUser');
+      if (!userRaw) return;
+      const parsedUser = JSON.parse(userRaw);
+      setUser(parsedUser);
+      setStyles(createChangeStyles(parsedUser.theme || {}));
+    }
+    loadThemeAndUser();
+  }, []);
 
   const saveUsername = async () => {
     if (!username.trim()) return Alert.alert('Error', 'Username cannot be empty.');
-    const userRaw = await AsyncStorage.getItem('currentUser');
-    if (!userRaw) return;
-    const user = JSON.parse(userRaw);
-    user.username = username;
-    await AsyncStorage.setItem('currentUser', JSON.stringify(user));
+    if (!user) return;
+
+    const usersRaw = await AsyncStorage.getItem('users');
+    const users = usersRaw ? JSON.parse(usersRaw) : [];
+
+    const updatedUser = { ...user, username };
+    const updatedUsers = users.map(u => u.id === user.id ? updatedUser : u);
+
+    await AsyncStorage.setItem('users', JSON.stringify(updatedUsers));
+    await AsyncStorage.setItem('currentUser', JSON.stringify(updatedUser));
+
     Alert.alert('Success', 'Username updated!');
     navigation.goBack();
   };

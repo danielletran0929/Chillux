@@ -68,7 +68,7 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
   const getAvatar = (u) =>
     u?.profilePic ?? u?.profilePhoto ?? u?.profilePhotoUrl ?? u?.avatarUrl ?? null;
   const getUsername = (u) => u?.username ?? u?.name ?? 'User';
-
+  
   // Generate emoji list once
   const allEmojis = useMemo(() => {
     const emojiList = [];
@@ -268,7 +268,9 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
           />
         </TouchableOpacity>
         <View style={postStyles.commentBubble}>
-          <Text style={postStyles.commentUser}>{c.user}:</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Profile', { userId: c.userId })}>
+            <Text style={postStyles.commentUser}>{c.user}:</Text>
+          </TouchableOpacity>
           <Text style={postStyles.commentText}>{c.text}</Text>
         </View>
       </View>

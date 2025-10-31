@@ -8,12 +8,14 @@ import {
   Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Icon from 'react-native-vector-icons/Ionicons';
 import common from '../styles/commonStyles';
 import styles from '../styles/loginStyles';
 
 export default function LoginScreen({ navigation, setLoggedIn }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     const stored = await AsyncStorage.getItem('users');
@@ -39,7 +41,7 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
       username: found.username,
       profilePhoto: found.profilePhoto,
       coverPhoto: found.coverPhoto,
-      theme: found.theme
+      theme: found.theme,
     };
 
     await AsyncStorage.setItem('currentUser', JSON.stringify(userSession));
@@ -55,6 +57,7 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
       <View style={common.panel}>
         <Text style={common.title}>Login</Text>
 
+        {/* Email Field */}
         <TextInput
           style={common.input}
           placeholder="Email"
@@ -62,22 +65,49 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
           value={email}
           onChangeText={setEmail}
         />
-        <TextInput
-          style={common.input}
-          placeholder="Password"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
 
+        {/* Password Field with Eye Toggle */}
+        <View style={{ position: 'relative', justifyContent: 'center' }}>
+          <TextInput
+            style={[common.input, { paddingRight: 40 }]} // space for icon
+            placeholder="Password"
+            secureTextEntry={!showPassword}
+            value={password}
+            onChangeText={setPassword}
+          />
+          <TouchableOpacity
+            onPress={() => setShowPassword(!showPassword)}
+            style={{
+              position: 'absolute',
+              right: 10,
+              top: 12,
+              padding: 4,
+            }}
+          >
+            <Icon
+              name={showPassword ? 'eye-off' : 'eye'}
+              size={22}
+              color="#666"
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* Forgot Password */}
+        <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
+          <Text style={styles.forgot}>Forgot your password?</Text>
+        </TouchableOpacity>
+
+        {/* Login Button */}
         <TouchableOpacity style={common.button} onPress={handleLogin}>
           <Text style={common.buttonText}>Login</Text>
         </TouchableOpacity>
 
+        {/* Create Account Button */}
         <TouchableOpacity
           style={[common.button, styles.secondaryButton]}
-          onPress={() => navigation.navigate('Register')}>
-          <Text style={common.buttonText}>Create Account</Text>
+          onPress={() => navigation.navigate('Register')}
+        >
+          <Text style={common.buttonText}>Register Account</Text>
         </TouchableOpacity>
       </View>
     </View>

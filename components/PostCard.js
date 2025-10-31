@@ -8,7 +8,10 @@ import {
   ScrollView,
   TextInput,
   ImageBackground,
+  Modal,
+  ScrollView as RNScrollView, // renamed to avoid clash
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import createStyles from '../styles/newsFeedStyles';
 
 export default function PostCard({
@@ -17,9 +20,11 @@ export default function PostCard({
   onLike,
   onComment,
   navigation,
-  theme: parentTheme, // 🧩 get theme from parent (Profile.js)
+  theme: parentTheme,
+  emojiOptions = ['👍', '😂', '🔥', '❤️', '😮'],
+  customEmojis = [],
+  setCustomEmojis = () => {},
 }) {
-  // 🧩 Default fallback theme to prevent layout issues
   const defaultTheme = {
     pageBackground: '#eef2f5',
     headerBackground: '#38b6ff',
@@ -33,15 +38,14 @@ export default function PostCard({
     inputBackground: '#fff',
   };
 
-  // 🧠 Final theme priority:
-  // 1. theme from Profile.js
-  // 2. post’s userTheme/theme (used in news feed)
-  // 3. defaultTheme
   const theme = { ...defaultTheme, ...(parentTheme || post.userTheme || post.theme || {}) };
   const styles = createStyles(theme);
 
   const [activeCommentBox, setActiveCommentBox] = useState(false);
   const [commentText, setCommentText] = useState('');
+  const [showEmojiPopup, setShowEmojiPopup] = useState(false);
+  const [showAddEmojiModal, setShowAddEmojiModal] = useState(false);
+  const [activePostId, setActivePostId] = useState(null);
 
   const reactions = post.likes
     ? Object.entries(
@@ -53,6 +57,31 @@ export default function PostCard({
     : [];
 
   const userReacted = post.likes?.[currentUser?.id];
+  const postProfilePic =
+    post.userId === currentUser?.id ? currentUser.profilePic : post.profilePic;
+
+  const Wrapper = theme.backgroundImage ? ImageBackground : View;
+  const wrapperProps = theme.backgroundImage
+    ? { source: { uri: theme.backgroundImage }, resizeMode: 'cover' }
+    : {};
+
+  // ✅ Full emoji list for the + button
+  const emojiRanges = [
+    [0x1f600, 0x1f64f],
+    [0x1f300, 0x1f5ff],
+    [0x1f680, 0x1f6ff],
+    [0x1f900, 0x1f9ff],
+    [0x2700, 0x27bf],
+    [0x2600, 0x26ff],
+  ];
+  const allEmojis = [];
+  for (const [start, end] of emojiRanges) {
+    for (let cp = start; cp <= end; cp++) {
+      try {
+        allEmojis.push(String.fromCodePoint(cp));
+      } catch {}
+    }
+  }
 
   const handleAddComment = () => {
     if (!commentText.trim()) return;
@@ -61,25 +90,28 @@ export default function PostCard({
     setActiveCommentBox(false);
   };
 
-  const postProfilePic =
-    post.userId === currentUser?.id ? currentUser.profilePic : post.profilePic;
+  // ✅ make sure we send the emoji properly to onLike
+  const handleEmojiSelect = async (emoji) => {
+    if (!emoji) return;
+    await onLike(post.id, emoji);
+    setShowEmojiPopup(false);
+  };
 
-  // 🧠 Use ImageBackground if theme has backgroundImage
-  const Wrapper = theme.backgroundImage ? ImageBackground : View;
-  const wrapperProps = theme.backgroundImage
-    ? {
-        source: { uri: theme.backgroundImage },
-        resizeMode: 'cover',
-      }
-    : {};
+  // ✅ store custom emoji and use it in like
+  const handleAddEmoji = async (emoji) => {
+    if (!emojiOptions.includes(emoji) && !customEmojis.includes(emoji)) {
+      const updated = [...customEmojis, emoji];
+      setCustomEmojis(updated);
+      await AsyncStorage.setItem('customEmojis', JSON.stringify(updated));
+    }
+    await onLike(post.id, emoji);
+    setShowAddEmojiModal(false);
+  };
 
   return (
     <Wrapper
       {...wrapperProps}
-      style={[
-        styles.postCard,
-        { backgroundColor: theme.postBackground || '#fff' },
-      ]}
+      style={[styles.postCard, { backgroundColor: theme.postBackground || '#fff' }]}
     >
       {/* Header */}
       <View style={styles.postHeader}>
@@ -106,20 +138,14 @@ export default function PostCard({
           style={{ marginLeft: 8 }}
           onPress={() => navigation.navigate('Profile', { userId: post.userId })}
         >
-          <Text style={[styles.username, { color: theme.textColor }]}>
-            {post.user}
-          </Text>
-          <Text style={{ color: theme.secondaryTextColor, fontSize: 12 }}>
-            {post.time}
-          </Text>
+          <Text style={[styles.username, { color: theme.textColor }]}>{post.user}</Text>
+          <Text style={{ color: theme.secondaryTextColor, fontSize: 12 }}>{post.time}</Text>
         </TouchableOpacity>
       </View>
 
       {/* Post Text */}
       {post.text ? (
-        <Text style={[styles.postText, { color: theme.textColor }]}>
-          {post.text}
-        </Text>
+        <Text style={[styles.postText, { color: theme.textColor }]}>{post.text}</Text>
       ) : null}
 
       {/* Post Images */}
@@ -133,15 +159,17 @@ export default function PostCard({
 
       {/* Actions */}
       <View style={styles.actionsRow}>
-        <TouchableOpacity onPress={() => onLike(post.id)}>
+        <TouchableOpacity
+          onPress={() => onLike(post.id, userReacted || '👍')}
+          onLongPress={() => {
+            setActivePostId(post.id);
+            setShowEmojiPopup(true);
+          }}
+        >
           <Text
             style={[
               styles.actionText,
-              {
-                color: userReacted
-                  ? theme.buttonBackground
-                  : theme.textColor,
-              },
+              { color: userReacted ? theme.buttonBackground : theme.textColor },
             ]}
           >
             {userReacted ? '❌ Remove' : '👍 Like'}{' '}
@@ -150,22 +178,66 @@ export default function PostCard({
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => setActiveCommentBox(!activeCommentBox)}>
-          <Text
-            style={[styles.actionText, { color: theme.buttonBackground }]}
-          >
-            💬 Comment
-          </Text>
+          <Text style={[styles.actionText, { color: theme.buttonBackground }]}>💬 Comment</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Emoji Popup */}
+      <Modal transparent visible={showEmojiPopup} animationType="fade">
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          onPress={() => setShowEmojiPopup(false)}
+        >
+          <View style={styles.emojiPopup}>
+            {[...emojiOptions, { add: true }].map((emoji, idx) => (
+              <TouchableOpacity
+                key={idx}
+                onPress={() => {
+                  if (emoji.add) {
+                    setShowEmojiPopup(false);
+                    setShowAddEmojiModal(true);
+                  } else handleEmojiSelect(emoji);
+                }}
+              >
+                <Text style={styles.emojiPopupText}>
+                  {emoji.add ? '➕' : emoji}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ✅ Scrollable Add Emoji Modal */}
+      <Modal transparent visible={showAddEmojiModal} animationType="slide">
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
+          onPress={() => setShowAddEmojiModal(false)}
+        >
+          <View style={[styles.bigEmojiSheet, { maxHeight: '70%' }]}>
+            <Text style={styles.bigEmojiTitle}>Pick any emoji</Text>
+            <RNScrollView showsVerticalScrollIndicator={false}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                {allEmojis.map((emoji) => (
+                  <TouchableOpacity key={emoji} onPress={() => handleAddEmoji(emoji)}>
+                    <Text style={styles.bigEmojiText}>{emoji}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </RNScrollView>
+            <TouchableOpacity onPress={() => setShowAddEmojiModal(false)}>
+              <Text style={{ fontWeight: 'bold', marginTop: 10 }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Reactions */}
       {reactions.length > 0 && (
         <View style={styles.reactionsContainer}>
           {reactions.map(([emoji, count], idx) => (
-            <Text
-              key={idx}
-              style={[styles.reactionCount, { color: theme.textColor }]}
-            >
+            <Text key={idx} style={[styles.reactionCount, { color: theme.textColor }]}>
               {emoji} {count}
             </Text>
           ))}
@@ -193,30 +265,21 @@ export default function PostCard({
                         ? { uri: commentProfilePic }
                         : require('../assets/placeholder.png')
                     }
-                    style={[
-                      styles.profilePic,
-                      { borderColor: theme.profileBorderColor },
-                    ]}
+                    style={[styles.profilePic, { borderColor: theme.profileBorderColor }]}
                   />
                 </TouchableOpacity>
-
                 <View
                   style={[
                     styles.commentBubble,
                     { backgroundColor: theme.postBackground },
                   ]}
                 >
-                  <Text
-                    style={[styles.commentUser, { color: theme.textColor }]}
-                  >
-                    {comment.user}:
-                  </Text>
-                  <Text
-                    style={{
-                      color: theme.secondaryTextColor,
-                      fontSize: 14,
-                    }}
-                  >
+                  <TouchableOpacity onPress={() => navigation.navigate('Profile', { userId: comment.userId })}>
+                    <Text style={[styles.commentUser, { color: theme.textColor }]}>
+                      {comment.user}:
+                    </Text>
+                  </TouchableOpacity>
+                  <Text style={{ color: theme.secondaryTextColor, fontSize: 14 }}>
                     {comment.text}
                   </Text>
                 </View>
@@ -229,10 +292,7 @@ export default function PostCard({
               onPress={() => navigation.navigate('Comments', { postId: post.id })}
             >
               <Text
-                style={[
-                  styles.viewAllCommentsText,
-                  { color: theme.buttonBackground },
-                ]}
+                style={[styles.viewAllCommentsText, { color: theme.buttonBackground }]}
               >
                 View all {post.comments.length} comments
               </Text>
@@ -259,12 +319,7 @@ export default function PostCard({
             onChangeText={setCommentText}
           />
           <TouchableOpacity onPress={handleAddComment}>
-            <Text
-              style={[
-                styles.commentBtnText,
-                { color: theme.buttonBackground },
-              ]}
-            >
+            <Text style={[styles.commentBtnText, { color: theme.buttonBackground }]}>
               Post
             </Text>
           </TouchableOpacity>
