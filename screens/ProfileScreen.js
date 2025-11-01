@@ -235,104 +235,164 @@ export default function Profile({ navigation, route }) {
 
   if (!user) return null;
 
-  return (
-    <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
-      <ScrollView style={[styles.pageContainer, { backgroundColor: user.theme?.pageBackground ?? '#eef2f5' }]}>
-        <TouchableOpacity
-          style={{ position: 'absolute', top: 40, left: 15, zIndex: 10 }}
-          onPress={() => navigation.goBack()}
-        >
-          <Icon name="arrow-back" size={28} color={user.theme?.textColor ?? '#fff'} />
-        </TouchableOpacity>
+ return (
+  <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+    <FlatList
+      data={posts}
+      keyExtractor={(item) => item.id}
+      renderItem={({ item }) => {
+        const postTheme = { ...(user?.theme || {}), ...(item?.theme || {}) };
+        return (
+          <PostCard
+            post={item}
+            currentUser={currentUser}
+            onLike={(postId, emoji) => handleLike(postId, emoji)}
+            onComment={(postId, text) => handleAddComment(postId, text)}
+            navigation={navigation}
+            showCustomThemes={true}
+            theme={postTheme}
+          />
+        );
+      }}
+      ListHeaderComponent={
+        <>
+          <TouchableOpacity
+            style={{ position: 'absolute', top: 40, left: 15, zIndex: 10 }}
+            onPress={() => navigation.goBack()}
+          >
+            <Icon name="arrow-back" size={28} color={user.theme?.textColor ?? '#fff'} />
+          </TouchableOpacity>
 
-        <Image
-          source={user.coverPhoto ? { uri: user.coverPhoto } : require('../assets/cover_photo.png')}
-          style={styles.coverPhoto}
-        />
+          <Image
+            source={user.coverPhoto ? { uri: user.coverPhoto } : require('../assets/cover_photo.png')}
+            style={styles.coverPhoto}
+          />
 
-        <View style={styles.profileRow}>
-  <View style={{ alignItems: 'center' }}>
-    <TouchableOpacity onPress={() => {
-      if (isOwnProfile) navigation.navigate('EditProfile', { user });
-      else navigation.navigate('Profile', { userId: user.id });
-    }}>
-      <Image
-        source={user.profilePic ? { uri: user.profilePic } : require('../assets/placeholder.png')}
-        style={[styles.profilePic, { borderColor: user.theme?.profileBorderColor ?? '#fff' }]}
-      />
-    </TouchableOpacity>
-    <Text style={[{ marginTop: 8, fontSize: 18, fontWeight: 'bold', color: user.theme?.textColor ?? '#222' }]}>
-      {user.username}
-    </Text>
-  </View>
+          <View style={styles.profileRow}>
+            <View style={{ alignItems: 'center' }}>
+              <TouchableOpacity
+  onPress={() => {
+    if (isOwnProfile) {
+      if (user && Object.keys(user).length > 0) {
+        navigation.navigate('EditProfile', { user });
+      } else {
+        Alert.alert('Please wait', 'User data is still loading.');
+      }
+    } else {
+      if (user?.id) {
+        navigation.navigate('Profile', { userId: user.id });
+      } else {
+        Alert.alert('Error', 'User information is missing.');
+      }
+    }
+  }}
+>
 
-  <TouchableOpacity
-    style={[styles.actionBtn, { backgroundColor: user.theme?.buttonBackground ?? '#0571d3' }]}
-    onPress={isOwnProfile ? () => navigation.navigate('EditProfile', { user }) : handleAddFriend}
-  >
-    <Text style={[styles.actionBtnText, { color: user.theme?.buttonTextColor ?? '#fff' }]}>
-      {isOwnProfile ? 'Edit Profile' : 'Add Friend'}
-    </Text>
-  </TouchableOpacity>
-</View>
-
-
-        <Text style={[styles.bioText, { color: user.theme?.textColor ?? '#222' }]}>{user.bio || 'No bio yet.'}</Text>
-
-        {/* Friends & Gallery */}
-        <View style={styles.friendsGalleryRow}>
-          <View style={styles.friendsContainer}>
-            <Text style={[styles.sectionTitle, { color: user.theme?.sectionTextColor ?? '#333' }]}>Friends</Text>
-            <View style={styles.friendsGalleryGrid}>
-              {friends.length > 0 ? friends.slice(0, 6).map((f, idx) => (
-                <TouchableOpacity key={idx} style={styles.friendItem} onPress={() => navigation.navigate('Profile', { userId: f.id })}>
-                  <Image source={f.profilePic ? { uri: f.profilePic } : require('../assets/placeholder.png')} style={styles.friendImg} />
-                </TouchableOpacity>
-              )) : <Text style={{ color: '#555', fontStyle: 'italic' }}>No friends yet</Text>}
-              {friends.length > 6 && (
-                <TouchableOpacity style={styles.viewAllFriendsBtn}>
-                  <Text style={[styles.viewAllFriendsText, { color: user.theme?.buttonBackground ?? '#0571d3' }]}>View all {friends.length} friends</Text>
-                </TouchableOpacity>
-              )}
+                <Image
+                  source={user.profilePic ? { uri: user.profilePic } : require('../assets/placeholder.png')}
+                  style={[styles.profilePic, { borderColor: user.theme?.profileBorderColor ?? '#fff' }]}
+                />
+              </TouchableOpacity>
+              <Text
+                style={{
+                  marginTop: 8,
+                  fontSize: 18,
+                  fontWeight: 'bold',
+                  color: user.theme?.textColor ?? '#222',
+                }}
+              >
+                {user.username}
+              </Text>
             </View>
+
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: user.theme?.buttonBackground ?? '#0571d3' }]}
+              onPress={isOwnProfile ? () => navigation.navigate('EditProfile', { user }) : handleAddFriend}
+            >
+              <Text
+                style={[styles.actionBtnText, { color: user.theme?.buttonTextColor ?? '#fff' }]}
+              >
+                {isOwnProfile ? 'Edit Profile' : 'Add Friend'}
+              </Text>
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.galleryContainer}>
-            <Text style={[styles.sectionTitle, { color: user.theme?.sectionTextColor ?? '#333' }]}>Gallery</Text>
-            <View style={styles.friendsGalleryGrid}>
-              {uploadedPictures.length > 0 ? uploadedPictures.slice(0, 6).map((uri, idx) => (
-                <View key={idx} style={styles.galleryItem}>
-                  <Image source={{ uri }} style={styles.galleryImg} />
-                </View>
-              )) : <Text style={{ color: '#555', fontStyle: 'italic' }}>No pictures uploaded</Text>}
+          <Text
+            style={[styles.bioText, { color: user.theme?.textColor ?? '#222' }]}
+          >
+            {user.bio || 'No bio yet.'}
+          </Text>
+
+          {/* Friends & Gallery */}
+          <View style={styles.friendsGalleryRow}>
+            <View style={styles.friendsContainer}>
+              <Text
+                style={[styles.sectionTitle, { color: user.theme?.sectionTextColor ?? '#333' }]}
+              >
+                Friends
+              </Text>
+              <View style={styles.friendsGalleryGrid}>
+                {friends.length > 0 ? (
+                  friends.slice(0, 6).map((f, idx) => (
+                    <TouchableOpacity
+                      key={idx}
+                      style={styles.friendItem}
+                      onPress={() => navigation.navigate('Profile', { userId: f.id })}
+                    >
+                      <Image
+                        source={f.profilePic ? { uri: f.profilePic } : require('../assets/placeholder.png')}
+                        style={styles.friendImg}
+                      />
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <Text style={{ color: '#555', fontStyle: 'italic' }}>
+                    No friends yet
+                  </Text>
+                )}
+                {friends.length > 6 && (
+                  <TouchableOpacity style={styles.viewAllFriendsBtn}>
+                    <Text
+                      style={[
+                        styles.viewAllFriendsText,
+                        { color: user.theme?.buttonBackground ?? '#0571d3' },
+                      ]}
+                    >
+                      View all {friends.length} friends
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.galleryContainer}>
+              <Text
+                style={[styles.sectionTitle, { color: user.theme?.sectionTextColor ?? '#333' }]}
+              >
+                Gallery
+              </Text>
+              <View style={styles.friendsGalleryGrid}>
+                {uploadedPictures.length > 0 ? (
+                  uploadedPictures.slice(0, 6).map((uri, idx) => (
+                    <View key={idx} style={styles.galleryItem}>
+                      <Image source={{ uri }} style={styles.galleryImg} />
+                    </View>
+                  ))
+                ) : (
+                  <Text style={{ color: '#555', fontStyle: 'italic' }}>
+                    No pictures uploaded
+                  </Text>
+                )}
+              </View>
             </View>
           </View>
-        </View>
-
-        {/* Posts */}
-        <FlatList
-          data={posts}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => {
-            // Merge post owner’s theme safely
-            const postTheme = { ...(user?.theme || {}), ...(item?.theme || {}) };
-
-            return (
-              <PostCard
-                post={item}
-                currentUser={currentUser}
-                onLike={(postId, emoji) => handleLike(postId, emoji)}
-                onComment={(postId, text) => handleAddComment(postId, text)}
-                navigation={navigation}
-                showCustomThemes={true}
-                theme={postTheme}
-              />
-            );
-          }}
-          contentContainerStyle={{ paddingBottom: 80 }}
-        />
-
-      </ScrollView>
-    </TouchableWithoutFeedback>
-  );
+        </>
+      }
+      contentContainerStyle={{
+        paddingBottom: 100,
+        backgroundColor: user.theme?.pageBackground ?? '#eef2f5',
+      }}
+    />
+  </TouchableWithoutFeedback>
+);
 }

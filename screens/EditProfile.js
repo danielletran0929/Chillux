@@ -14,34 +14,42 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { themePresets } from '../styles/editProfileStyles';
 
 export default function EditProfile({ navigation, route }) {
-  const { user } = route.params;
+  const user = route.params?.user || {}; // safely fallback to empty object
 
-  const [profilePic, setProfilePic] = useState(user.profilePic);
-  const [coverPhoto, setCoverPhoto] = useState(user.coverPhoto);
-  const [bio, setBio] = useState(user.bio);
+  // Default theme
+  const defaultTheme = {
+    pageBackground: '#eef2f5',
+    headerBackground: '#38b6ff',
+    buttonBackground: '#0571d3',
+    buttonTextColor: '#fff',
+    textColor: '#222',
+    postBackground: '#fff',
+    profileBorderColor: '#0571d3',
+  };
+
+  const theme = { ...defaultTheme, ...(user.theme || {}) };
+
+  const [profilePic, setProfilePic] = useState(user.profilePic || null);
+  const [coverPhoto, setCoverPhoto] = useState(user.coverPhoto || null);
+  const [bio, setBio] = useState(user.bio || '');
   const [backgroundImage, setBackgroundImage] = useState(user.backgroundImage || null);
 
-  const [pageBackground, setPageBackground] = useState(user.theme?.pageBackground || '#eef2f5');
-  const [headerBackground, setHeaderBackground] = useState(user.theme?.headerBackground || '#38b6ff');
-  const [buttonBackground, setButtonBackground] = useState(user.theme?.buttonBackground || '#0571d3');
-  const [textColor, setTextColor] = useState(user.theme?.textColor || '#222');
-  const [postBackground, setPostBackground] = useState(user.theme?.postBackground || '#fff');
-  const [profileBorderColor, setProfileBorderColor] = useState(user.theme?.profileBorderColor || '#0571d3');
-  const [buttonTextColor, setButtonTextColor] = useState(user.theme?.buttonTextColor || '#fff');
+  const [pageBackground, setPageBackground] = useState(theme.pageBackground);
+  const [headerBackground, setHeaderBackground] = useState(theme.headerBackground);
+  const [buttonBackground, setButtonBackground] = useState(theme.buttonBackground);
+  const [buttonTextColor, setButtonTextColor] = useState(theme.buttonTextColor);
+  const [textColor, setTextColor] = useState(theme.textColor);
+  const [postBackground, setPostBackground] = useState(theme.postBackground);
+  const [profileBorderColor, setProfileBorderColor] = useState(theme.profileBorderColor);
 
   const colorOptions = ['#000', '#ff4d4d', '#1e90ff', '#32cd32', '#9b59b6', '#edb51a', '#ffffff', '#eef2f5'];
 
-  // ✅ Updated for react-native-image-picker
   const pickImage = async (setter) => {
-    const options = {
-      mediaType: 'photo',
-      maxWidth: 800,
-      maxHeight: 800,
-      quality: 0.7,
-    };
-    const result = await launchImageLibrary(options);
-    if (result && result.assets && result.assets.length > 0) {
-      setter(result.assets[0].uri);
+    try {
+      const result = await launchImageLibrary({ mediaType: 'photo', maxWidth: 800, maxHeight: 800, quality: 0.7 });
+      if (result?.assets?.length > 0) setter(result.assets[0].uri);
+    } catch (err) {
+      console.log('Image picker error', err);
     }
   };
 
@@ -64,26 +72,27 @@ export default function EditProfile({ navigation, route }) {
         bio,
         backgroundImage,
         theme: {
-          pageBackground,
-          headerBackground,
-          buttonBackground,
-          buttonTextColor,
-          textColor,
-          postBackground,
-          profileBorderColor,
+          pageBackground: pageBackground || defaultTheme.pageBackground,
+          headerBackground: headerBackground || defaultTheme.headerBackground,
+          buttonBackground: buttonBackground || defaultTheme.buttonBackground,
+          buttonTextColor: buttonTextColor || defaultTheme.buttonTextColor,
+          textColor: textColor || defaultTheme.textColor,
+          postBackground: postBackground || defaultTheme.postBackground,
+          profileBorderColor: profileBorderColor || defaultTheme.profileBorderColor,
         },
       };
 
+      // Save current user
       await AsyncStorage.setItem('currentUser', JSON.stringify(updatedUser));
 
+      // Update users list
       const usersRaw = await AsyncStorage.getItem('users');
-      let users = usersRaw ? JSON.parse(usersRaw) : [];
-
+      const users = usersRaw ? JSON.parse(usersRaw) : [];
       const idx = users.findIndex((u) => u.id === updatedUser.id);
       if (idx !== -1) users[idx] = updatedUser;
       else users.push(updatedUser);
-
       await AsyncStorage.setItem('users', JSON.stringify(users));
+
       navigation.goBack();
     } catch (err) {
       console.log('Save Profile Error:', err);
@@ -135,8 +144,6 @@ export default function EditProfile({ navigation, route }) {
         </TouchableOpacity>
 
         <Text style={[styles.sectionTitle, { color: textColor }]}>Custom Theme</Text>
-
-        {/* Color pickers */}
         {[
           ['Page Background', pageBackground, setPageBackground],
           ['Header Background', headerBackground, setHeaderBackground],

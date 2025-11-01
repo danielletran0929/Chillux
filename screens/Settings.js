@@ -54,21 +54,26 @@ export default function Settings({ navigation, setLoggedIn }) {
   };
 
   const handleLogout = async () => {
-    try {
-      await AsyncStorage.removeItem('isLoggedIn');
-
-      const currentUserRaw = await AsyncStorage.getItem('currentUser');
-      if (currentUserRaw) {
-        const parsedUser = JSON.parse(currentUserRaw);
-        await AsyncStorage.setItem('lastLoggedInUser', JSON.stringify(parsedUser.id));
-      }
-
-      if (setLoggedIn) setLoggedIn(false);
-      navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-    } catch (error) {
-      console.log('Logout error:', error);
+  try {
+    await AsyncStorage.removeItem('isLoggedIn');
+    const currentUserRaw = await AsyncStorage.getItem('currentUser');
+    if (currentUserRaw) {
+      const parsedUser = JSON.parse(currentUserRaw);
+      await AsyncStorage.setItem('lastLoggedInUser', JSON.stringify(parsedUser.id));
     }
-  };
+
+    if (setLoggedIn) setLoggedIn(false);
+
+    // Use parent navigator reset to ensure it hits the root
+    navigation.getParent()?.reset({
+      index: 0,
+      routes: [{ name: 'Login' }],
+    });
+  } catch (error) {
+    console.log('Logout error:', error);
+  }
+};
+
 
   const handleNavigate = (screenName) => {
     navigation.navigate(screenName);

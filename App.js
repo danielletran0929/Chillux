@@ -3,6 +3,13 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityIndicator, View } from 'react-native';
+import 'react-native-gesture-handler';
+import { LogBox } from 'react-native';
+import ImmersiveMode from 'react-native-immersive-mode'; // 👈 use this instead
+
+LogBox.ignoreLogs([
+  'InteractionManager has been deprecated'
+]);
 
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
@@ -33,6 +40,21 @@ export default function App() {
     checkLogin();
   }, []);
 
+  // 👇 This function re-applies immersive mode on navigation changes
+  const handleNavigationChange = async () => {
+    try {
+      ImmersiveMode.fullLayout(true); // enable full layout
+      ImmersiveMode.setBarMode('BottomSticky'); // hide bottom nav bar
+    } catch (error) {
+      console.log('Error enabling immersive mode:', error);
+    }
+  };
+
+  // 👇 Enable immersive mode on app launch
+  useEffect(() => {
+    handleNavigationChange();
+  }, []);
+
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -42,37 +64,34 @@ export default function App() {
   }
 
   return (
-  <NavigationContainer>
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-
-      {loggedIn ? (
-        <>
-          <Stack.Screen name="Home">
-            {props => <NewsFeed {...props} setLoggedIn={setLoggedIn} />}
-          </Stack.Screen>
-          <Stack.Screen name="CreatePost" component={CreatePost} />
-          <Stack.Screen name="Comments" component={Comments} />
-          <Stack.Screen name="Profile" component={Profile} />
-          <Stack.Screen name="Settings">
-            {props => <Settings {...props} setLoggedIn={setLoggedIn} />}
-          </Stack.Screen>
-          <Stack.Screen name="ChangeEmail" component={ChangeEmail} />
-          <Stack.Screen name="ChangePassword" component={ChangePassword} />
-          <Stack.Screen name="ChangeUsername" component={ChangeUsername} />
-          <Stack.Screen name="EditProfile" component={EditProfile} />
-        </>
-      ) : (
-        <>
-          <Stack.Screen name="Login">
-            {props => <LoginScreen {...props} setLoggedIn={setLoggedIn} />}
-          </Stack.Screen>
-          <Stack.Screen name="Register" component={RegisterScreen} />
-          <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
-        </>
-      )}
-
-    </Stack.Navigator>
-  </NavigationContainer>
-);
-
+    <NavigationContainer onStateChange={handleNavigationChange}>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {loggedIn ? (
+          <>
+            <Stack.Screen name="Home">
+              {props => <NewsFeed {...props} setLoggedIn={setLoggedIn} />}
+            </Stack.Screen>
+            <Stack.Screen name="CreatePost" component={CreatePost} />
+            <Stack.Screen name="Comments" component={Comments} />
+            <Stack.Screen name="Profile" component={Profile} />
+            <Stack.Screen name="Settings">
+              {props => <Settings {...props} setLoggedIn={setLoggedIn} />}
+            </Stack.Screen>
+            <Stack.Screen name="ChangeEmail" component={ChangeEmail} />
+            <Stack.Screen name="ChangePassword" component={ChangePassword} />
+            <Stack.Screen name="ChangeUsername" component={ChangeUsername} />
+            <Stack.Screen name="EditProfile" component={EditProfile} />
+          </>
+        ) : (
+          <>
+            <Stack.Screen name="Login">
+              {props => <LoginScreen {...props} setLoggedIn={setLoggedIn} />}
+            </Stack.Screen>
+            <Stack.Screen name="Register" component={RegisterScreen} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
+          </>
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
 }
