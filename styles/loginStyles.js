@@ -1,13 +1,18 @@
 import { StyleSheet } from 'react-native';
 
 export default StyleSheet.create({
-  forgot: {
-    textAlign: 'left',
-    marginTop: 5,
-    color: '#0571d3'
+  ForgotLink: {
+    textAlign: 'right',
+    marginBottom: 20,
+    fontSize: 12,
+    color: '#fda85e',
+    fontWeight: '500',
   },
-  secondaryButton: {
-    backgroundColor: '#ffb300',
-    marginTop: 10
-  }
+  SignInLink: {
+    textAlign: 'center',
+    fontSize: 12,
+    marginTop: 20,
+    color: '#fda85e',
+    fontWeight: '500',
+  },
 });

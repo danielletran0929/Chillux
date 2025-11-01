@@ -1,5 +1,5 @@
 // components/PostCard.js
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,18 +9,20 @@ import {
   TextInput,
   ImageBackground,
   Modal,
-  ScrollView as RNScrollView, // renamed to avoid clash
+  ScrollView as RNScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import createStyles from '../styles/newsFeedStyles';
+
 
 export default function PostCard({
   post,
   currentUser,
   onLike,
   onComment,
+  onDelete,
   navigation,
-  theme: parentTheme,
+  theme: parentTheme = {},
   emojiOptions = ['👍', '😂', '🔥', '❤️', '😮'],
   customEmojis = [],
   setCustomEmojis = () => {},
@@ -38,7 +40,14 @@ export default function PostCard({
     inputBackground: '#fff',
   };
 
-  const theme = { ...defaultTheme, ...(parentTheme || post.userTheme || post.theme || {}) };
+  // ✅ Make theme reactive with useMemo
+  const theme = useMemo(() => ({
+    ...defaultTheme,
+    ...(post.userTheme || {}),
+    ...(post.theme || {}),
+    ...parentTheme,
+  }), [post.userTheme, post.theme, parentTheme]);
+
   const styles = createStyles(theme);
 
   const [activeCommentBox, setActiveCommentBox] = useState(false);
@@ -65,7 +74,7 @@ export default function PostCard({
     ? { source: { uri: theme.backgroundImage }, resizeMode: 'cover' }
     : {};
 
-  // ✅ Full emoji list for the + button
+  // All emojis for add modal
   const emojiRanges = [
     [0x1f600, 0x1f64f],
     [0x1f300, 0x1f5ff],
@@ -90,14 +99,12 @@ export default function PostCard({
     setActiveCommentBox(false);
   };
 
-  // ✅ make sure we send the emoji properly to onLike
   const handleEmojiSelect = async (emoji) => {
     if (!emoji) return;
     await onLike(post.id, emoji);
     setShowEmojiPopup(false);
   };
 
-  // ✅ store custom emoji and use it in like
   const handleAddEmoji = async (emoji) => {
     if (!emojiOptions.includes(emoji) && !customEmojis.includes(emoji)) {
       const updated = [...customEmojis, emoji];
@@ -111,10 +118,19 @@ export default function PostCard({
   return (
     <Wrapper
       {...wrapperProps}
-      style={[styles.postCard, { backgroundColor: theme.postBackground || '#fff' }]}
+      style={[styles.postCard, { backgroundColor: theme.postBackground }]}
     >
       {/* Header */}
       <View style={styles.postHeader}>
+        {currentUser?.id === post.userId && onDelete && (
+          <TouchableOpacity
+            onPress={() => onDelete(post.id)}
+            style={{ marginRight: 8 }}
+          >
+            <Text style={{ fontSize: 18, color: 'red' }}>🗑️</Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
           onPress={() => navigation.navigate('Profile', { userId: post.userId })}
         >
@@ -138,14 +154,20 @@ export default function PostCard({
           style={{ marginLeft: 8 }}
           onPress={() => navigation.navigate('Profile', { userId: post.userId })}
         >
-          <Text style={[styles.username, { color: theme.textColor }]}>{post.user}</Text>
-          <Text style={{ color: theme.secondaryTextColor, fontSize: 12 }}>{post.time}</Text>
+          <Text style={[styles.username, { color: theme.textColor }]}>
+            {post.user}
+          </Text>
+          <Text style={[styles.commentText, { color: theme.textColor }]}>
+            {post.time}
+          </Text>
         </TouchableOpacity>
       </View>
 
       {/* Post Text */}
       {post.text ? (
-        <Text style={[styles.postText, { color: theme.textColor }]}>{post.text}</Text>
+        <Text style={[styles.postText, { color: theme.textColor }]}>
+          {post.text}
+        </Text>
       ) : null}
 
       {/* Post Images */}
@@ -178,7 +200,9 @@ export default function PostCard({
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => setActiveCommentBox(!activeCommentBox)}>
-          <Text style={[styles.actionText, { color: theme.buttonBackground }]}>💬 Comment</Text>
+          <Text style={[styles.actionText, { color: theme.buttonBackground }]}>
+            💬 Comment
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -208,7 +232,7 @@ export default function PostCard({
         </TouchableOpacity>
       </Modal>
 
-      {/* ✅ Scrollable Add Emoji Modal */}
+      {/* Add Emoji Modal */}
       <Modal transparent visible={showAddEmojiModal} animationType="slide">
         <TouchableOpacity
           style={styles.modalBackdrop}
@@ -265,21 +289,30 @@ export default function PostCard({
                         ? { uri: commentProfilePic }
                         : require('../assets/placeholder.png')
                     }
-                    style={[styles.profilePic, { borderColor: theme.profileBorderColor }]}
+                    style={[
+                      styles.profilePic,
+                      { borderColor: theme.profileBorderColor },
+                    ]}
                   />
                 </TouchableOpacity>
                 <View
                   style={[
                     styles.commentBubble,
-                    { backgroundColor: theme.postBackground },
+                    { backgroundColor: theme.commentBackground || theme.postBackground },
                   ]}
                 >
-                  <TouchableOpacity onPress={() => navigation.navigate('Profile', { userId: comment.userId })}>
+                  <TouchableOpacity
+                    onPress={() =>
+                      navigation.navigate('Profile', { userId: comment.userId })
+                    }
+                  >
                     <Text style={[styles.commentUser, { color: theme.textColor }]}>
                       {comment.user}:
                     </Text>
                   </TouchableOpacity>
-                  <Text style={{ color: theme.secondaryTextColor, fontSize: 14 }}>
+                  <Text
+                    style={[styles.commentText, { color: theme.textColor }]}
+                  >
                     {comment.text}
                   </Text>
                 </View>

@@ -1,29 +1,24 @@
-// profileStyles.js
 import { StyleSheet } from 'react-native';
 
-export default function createStyles(theme = {}) {
-  const t = {
-    pageBackground: theme.pageBackground ?? '#eef2f5',
-    textColor: theme.textColor ?? '#222',
-    usernameColor: theme.usernameColor ?? '#333',
-    bioTextColor: theme.bioTextColor ?? '#444',
-    buttonBackground: theme.buttonBackground ?? '#0571d3',
-    buttonTextColor: theme.buttonTextColor ?? '#fff',
-    sectionTextColor: theme.sectionTextColor ?? '#333',
-    postBackground: theme.postBackground ?? '#fff',
-    commentBackground: theme.commentBackground ?? '#f5f5f5',
-    profileBorderColor: theme.profileBorderColor ?? '#0571d3',
+export default function createStyles() {
+  const theme = {
+    pageBackground: '#eef2f5',
+    textColor: '#222',
+    usernameColor: '#555',
+    buttonBackground: '#0571d3',
+    buttonTextColor: '#fff',
+    sectionTextColor: '#333',
+    postBackground: '#fff',
+    commentBackground: '#f5f5f5',
   };
 
   return StyleSheet.create({
-    // MAIN PAGE
+    // Profile screen
     pageContainer: {
       flex: 1,
-      backgroundColor: t.pageBackground,
+      backgroundColor: theme.pageBackground,
       paddingBottom: 20,
     },
-
-    // PROFILE HEADER
     coverPhoto: {
       width: '100%',
       height: 180,
@@ -40,84 +35,57 @@ export default function createStyles(theme = {}) {
       height: 90,
       borderRadius: 45,
       borderWidth: 3,
-      borderColor: t.profileBorderColor,
+      borderColor: '#fff',
       backgroundColor: '#aaa',
     },
-    username: {
+    actionBtn: {
+      backgroundColor: theme.buttonBackground,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+    },
+    actionBtnText: {
+      color: theme.buttonTextColor,
       fontWeight: 'bold',
-      color: t.usernameColor,
-      fontSize: 18,
-      marginTop: 6,
+      fontSize: 14,
     },
     bioText: {
       marginTop: 10,
       marginHorizontal: 15,
       fontSize: 13,
-      color: t.bioTextColor,
+      color: theme.textColor,
     },
 
-    // ACTION BUTTONS
-    actionBtn: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 20,
-      backgroundColor: t.buttonBackground,
-    },
-    actionBtnText: {
-      color: t.buttonTextColor,
-      fontWeight: 'bold',
-      fontSize: 14,
-    },
-
-    // SECTION HEADERS
+    // Sections
     sectionTitle: {
       fontSize: 15,
       fontWeight: 'bold',
       marginBottom: 6,
-      color: t.sectionTextColor,
+      color: theme.sectionTextColor,
       marginHorizontal: 5,
     },
 
-    // FRIENDS SECTION
-    friendItem: {
-      width: '48%',
-      marginBottom: 10,
-      aspectRatio: 1,
-      borderRadius: 10,
-      overflow: 'hidden',
-    },
+    // Friends list
     friendImg: {
-      width: '100%',
-      height: '100%',
-      resizeMode: 'cover',
+      width: 48,
+      height: 48,
+      borderRadius: 24,
     },
-    viewAllFriendsBtn: {
-      width: '100%',
-      marginTop: 5,
-    },
-    viewAllFriendsText: {
-      textAlign: 'center',
-      color: t.buttonBackground,
-      fontWeight: 'bold',
+    friendItem: {
+      margin: 3,
     },
 
-    // GALLERY
-    galleryItem: {
-      width: '48%',
-      marginBottom: 10,
-      aspectRatio: 1,
-      borderRadius: 10,
-      overflow: 'hidden',
-    },
+    // Uploaded gallery
     galleryImg: {
-      width: '100%',
-      height: '100%',
-      resizeMode: 'cover',
+      width: '48%',
+      aspectRatio: 1,
+      margin: '1%',
+      borderRadius: 8,
     },
 
-    // POSTS
+    // Posts
     postCard: {
-      backgroundColor: t.postBackground,
+      backgroundColor: theme.postBackground,
       padding: 10,
       marginVertical: 6,
       borderRadius: 10,
@@ -129,21 +97,21 @@ export default function createStyles(theme = {}) {
       alignItems: 'center',
       marginBottom: 6,
     },
-    postText: {
-      color: t.textColor,
-      fontSize: 13,
+    username: {
+      fontWeight: 'bold',
+      color: theme.usernameColor,
+      fontSize: 14,
+      marginBottom: 2,
     },
+    postText: { color: theme.textColor, fontSize: 13 },
     inlinePostImage: {
       width: 120,
       height: 120,
       borderRadius: 8,
       marginRight: 8,
     },
-    imageContainer: {
-      marginVertical: 8,
-    },
+    imageContainer: { marginVertical: 8 },
 
-    // COMMENTS
     commentRow: {
       flexDirection: 'row',
       alignItems: 'flex-start',
@@ -161,38 +129,24 @@ export default function createStyles(theme = {}) {
       paddingHorizontal: 8,
       borderRadius: 10,
       flex: 1,
-      backgroundColor: t.commentBackground,
+      backgroundColor: theme.commentBackground,
     },
     commentUser: {
       fontWeight: 'bold',
       marginBottom: 1,
-      color: t.usernameColor,
+      color: theme.usernameColor,
       fontSize: 12,
     },
-    commentText: {
-      color: t.textColor,
-      fontSize: 12,
-    },
+    commentText: { color: theme.textColor, fontSize: 12 },
 
-    // FRIENDS & GALLERY GRID
+    // Friends & gallery row
     friendsGalleryRow: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
       marginTop: 15,
       paddingHorizontal: 10,
     },
-    friendsContainer: {
-      flex: 1,
-      marginRight: 10,
-    },
-    galleryContainer: {
-      flex: 1,
-      marginLeft: 10,
-    },
-    friendsGalleryGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'space-between',
-    },
+    friendsContainer: { flex: 1, marginRight: 5 },
+    galleryContainer: { flex: 1, marginLeft: 5 },
+    galleryGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   });
 }

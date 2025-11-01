@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, TextInput, Text, TouchableOpacity, Image, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'react-native-linear-gradient';
 import common from '../styles/commonStyles';
 import styles from '../styles/loginStyles';
 
@@ -27,7 +28,12 @@ export default function ForgotPasswordScreen({ navigation }) {
   };
 
   return (
-    <View style={common.container}>
+    <LinearGradient
+      colors={['#2d006f', '#a56a3c']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 2, y: 1 }}
+      style={common.container}
+    >
       <Image source={require('../assets/logo.png')} style={common.logo} />
 
       <View style={common.panel}>
@@ -41,17 +47,23 @@ export default function ForgotPasswordScreen({ navigation }) {
           autoCapitalize="none"
         />
 
-        <TouchableOpacity style={common.button} onPress={handleRecover}>
-          <Text style={common.buttonText}>Recover Password</Text>
+        <TouchableOpacity onPress={handleRecover}>
+           <LinearGradient
+              colors={['#ffb300', '#ff8c00']} 
+              end={{ x: 1, y: 1 }}
+              style={common.forgotButton} 
+            >
+            <Text style={common.forgotButtonText}>Recover Password</Text>
+          </LinearGradient>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[common.button, styles.secondaryButton]}
           onPress={() => navigation.navigate('Login')}
         >
-          <Text style={common.buttonText}>Back to Login</Text>
+          <Text style={common.forgotButtonText2}>Back to Login</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </LinearGradient>
   );
 }

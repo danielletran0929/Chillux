@@ -8,6 +8,7 @@ import {
   Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import common from '../styles/commonStyles';
 import styles from '../styles/loginStyles';
@@ -51,7 +52,13 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
   };
 
   return (
-    <View style={common.container}>
+    <LinearGradient
+      colors={['#2d006f', '#a56a3c']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 2, y: 1 }}
+      style={common.container}
+    >
+
       <Image source={require('../assets/logo.png')} style={common.logo} />
 
       <View style={common.panel}>
@@ -94,22 +101,27 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
 
         {/* Forgot Password */}
         <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
-          <Text style={styles.forgot}>Forgot your password?</Text>
+          <Text style={styles.ForgotLink}>Forgot your password?</Text>
         </TouchableOpacity>
 
         {/* Login Button */}
         <TouchableOpacity style={common.button} onPress={handleLogin}>
+          <LinearGradient
+            colors={['#ffb300', '#ff8c00']} 
+            end={{ x: 1, y: 1 }}
+            style={common.button} 
+          >
           <Text style={common.buttonText}>Login</Text>
+          </LinearGradient>
         </TouchableOpacity>
 
         {/* Create Account Button */}
         <TouchableOpacity
-          style={[common.button, styles.secondaryButton]}
           onPress={() => navigation.navigate('Register')}
         >
-          <Text style={common.buttonText}>Register Account</Text>
+          <Text style={styles.SignInLink}>New Here? Create Account</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </LinearGradient>
   );
 }
