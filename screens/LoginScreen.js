@@ -8,7 +8,7 @@ import {
   Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import common from '../styles/commonStyles';
 import styles from '../styles/loginStyles';
@@ -155,3 +155,4 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
     </LinearGradient>
   );
 }
+
