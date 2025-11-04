@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import createStyles from '../styles/newsFeedStyles';
 
@@ -734,3 +734,4 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
     </KeyboardAvoidingView>
   );
 }
+
