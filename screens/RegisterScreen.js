@@ -8,7 +8,7 @@ import {
   Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from 'react-native-linear-gradient';
 import common from '../styles/commonStyles';
 import styles from '../styles/registerStyles';
 
@@ -163,3 +163,4 @@ export default function RegisterScreen({ navigation }) {
     </LinearGradient>
   );
 }
+
