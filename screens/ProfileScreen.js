@@ -1,4 +1,3 @@
-// Profile.js
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
@@ -10,30 +9,31 @@ import {
   TouchableWithoutFeedback,
   Alert,
   SafeAreaView,
+  StyleSheet,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
 import createStyles from '../styles/profileStyles';
 import PostCard from '../components/PostCard';
 import Icon from 'react-native-vector-icons/Ionicons';
 
 export default function Profile({ navigation, route }) {
   const { userId } = route.params;
-
   const [user, setUser] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [posts, setPosts] = useState([]);
   const [uploadedPictures, setUploadedPictures] = useState([]);
   const [friends, setFriends] = useState([]);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [customEmojis, setCustomEmojis] = useState([]);
   const [emojiOptions, setEmojiOptions] = useState([]);
   const [activeCommentPostId, setActiveCommentPostId] = useState(null);
   const [commentText, setCommentText] = useState('');
+  const [hasPendingRequest, setHasPendingRequest] = useState(false); // NEW: pending request state
 
   const defaultEmojis = ['👍', '😂', '🔥', '❤️', '😮'];
-
-  // ✅ Dynamically apply theme
   const styles = createStyles(user?.theme || {});
 
   const allEmojis = useMemo(() => {
@@ -101,6 +101,7 @@ export default function Profile({ navigation, route }) {
     }
   };
 
+  // load user data and also check for pending request (request sent by current user to the viewed user)
   useFocusEffect(
     React.useCallback(() => {
       let mounted = true;
@@ -165,13 +166,25 @@ export default function Profile({ navigation, route }) {
           setUploadedPictures(picsRaw ? JSON.parse(picsRaw) : []);
 
           const friendsRaw = await AsyncStorage.getItem(`friends-${userId}`);
-          setFriends(friendsRaw ? JSON.parse(friendsRaw) : []);
+          const syncedFriends = await syncFriendsWithLatestProfiles(userId);
+          setFriends(syncedFriends);
+
 
           const parsedCustom = customEmojisRaw
             ? JSON.parse(customEmojisRaw)
             : [];
           setCustomEmojis(parsedCustom);
           setEmojiOptions([...defaultEmojis, ...parsedCustom]);
+
+          // NEW: check whether currentUser has already sent a friend request to this viewed user
+          if (parsedCurrent && parsedCurrent.id) {
+            const frRaw = await AsyncStorage.getItem(`friendRequests-${userId}`);
+            const frList = frRaw ? JSON.parse(frRaw) : [];
+            const alreadySent = frList.some((r) => r.fromId === parsedCurrent.id);
+            setHasPendingRequest(Boolean(alreadySent));
+          } else {
+            setHasPendingRequest(false);
+          }
         } catch (err) {
           console.log('loadUserData error', err);
         }
@@ -184,40 +197,58 @@ export default function Profile({ navigation, route }) {
     }, [userId])
   );
 
+  // NEW: send friend request (adds to friendRequests-<targetId>) instead of immediately adding to friends
   const handleAddFriend = async () => {
     if (!currentUser) return Alert.alert('Not logged in');
     try {
-      const targetKey = `friends-${user.id}`;
-      const ownKey = `friends-${currentUser.id}`;
+      // Prevent sending requests to self
+      if (currentUser.id === user.id) return Alert.alert("You can't friend yourself");
 
-      const targetRaw = await AsyncStorage.getItem(targetKey);
-      let targetList = targetRaw ? JSON.parse(targetRaw) : [];
-      if (targetList.some((f) => f.id === currentUser.id))
+      // Check if already friends
+      const targetFriendsRaw = await AsyncStorage.getItem(`friends-${user.id}`);
+      const targetFriends = targetFriendsRaw ? JSON.parse(targetFriendsRaw) : [];
+      if (targetFriends.some((f) => f.id === currentUser.id)) {
         return Alert.alert('Already friends');
-      const newTargetList = [
-        ...targetList,
-        {
-          id: currentUser.id,
-          profilePic: currentUser.profilePic,
-          username: currentUser.username,
-        },
-      ];
-      await AsyncStorage.setItem(targetKey, JSON.stringify(newTargetList));
-
-      const ownRaw = await AsyncStorage.getItem(ownKey);
-      let ownList = ownRaw ? JSON.parse(ownRaw) : [];
-      if (!ownList.some((f) => f.id === user.id)) {
-        ownList = [
-          ...ownList,
-          { id: user.id, profilePic: user.profilePic, username: user.username },
-        ];
-        await AsyncStorage.setItem(ownKey, JSON.stringify(ownList));
       }
 
-      setFriends(newTargetList);
-      Alert.alert('Friend added!');
+      // Load target's friendRequests list and check duplicates
+      const frKey = `friendRequests-${user.id}`;
+      const frRaw = await AsyncStorage.getItem(frKey);
+      let frList = frRaw ? JSON.parse(frRaw) : [];
+
+      // If there's already a request from this user, do nothing (or show message)
+      if (frList.some((r) => r.fromId === currentUser.id)) {
+        setHasPendingRequest(true);
+        return Alert.alert('Request already sent');
+      }
+
+      // Push new request
+      const newReq = {
+        fromId: currentUser.id,
+        fromUsername: currentUser.username,
+        fromProfilePic: currentUser.profilePic ?? null,
+        time: new Date().toISOString(),
+        // optional message could be added
+      };
+      frList = [newReq, ...frList];
+      await AsyncStorage.setItem(frKey, JSON.stringify(frList));
+
+      setHasPendingRequest(true);
+      Alert.alert('Friend request sent');
     } catch (err) {
       console.log('handleAddFriend error', err);
+      Alert.alert('Error', 'Could not send friend request');
+    }
+  };
+
+  // This helper can be used if you need to programmatically refresh friends after an accept happens elsewhere
+  const refreshFriends = async () => {
+    try {
+      const syncedFriends = await syncFriendsWithLatestProfiles(userId);
+      setFriends(syncedFriends);
+
+    } catch (err) {
+      console.log('refreshFriends error', err);
     }
   };
 
@@ -241,6 +272,34 @@ export default function Profile({ navigation, route }) {
     }
   };
 
+  const syncFriendsWithLatestProfiles = async (userId) => {
+  try {
+    const usersRaw = await AsyncStorage.getItem('users');
+    const allUsers = usersRaw ? JSON.parse(usersRaw) : [];
+
+    const friendsRaw = await AsyncStorage.getItem(`friends-${userId}`);
+    const oldFriends = friendsRaw ? JSON.parse(friendsRaw) : [];
+
+    const updatedFriends = oldFriends.map(f => {
+      const latest = allUsers.find(u => u.id === f.id);
+      return latest
+        ? {
+            id: latest.id,
+            username: latest.username,
+            profilePic: latest.profilePhoto ?? latest.profilePic ?? null,
+          }
+        : f;
+    });
+
+    await AsyncStorage.setItem(`friends-${userId}`, JSON.stringify(updatedFriends));
+    return updatedFriends;
+  } catch (err) {
+    console.log('syncFriendsWithLatestProfiles error', err);
+    return [];
+  }
+};
+
+
   const handleAddComment = async (postId, text) => {
     if (!currentUser || !text.trim()) return;
     const updated = posts.map((p) => {
@@ -263,15 +322,52 @@ export default function Profile({ navigation, route }) {
     setActiveCommentPostId(null);
   };
 
+  // Upload to Gallery
+  const handleUploadToGallery = async () => {
+    if (!isOwnProfile) return;
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      return Alert.alert('Permission required', 'You need to allow access to your gallery.');
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets?.length > 0) {
+      const uri = result.assets[0].uri;
+      const updatedGallery = [...uploadedPictures, uri];
+      setUploadedPictures(updatedGallery);
+      await AsyncStorage.setItem(`uploadedPictures-${user.id}`, JSON.stringify(updatedGallery));
+      Alert.alert('Image uploaded to gallery!');
+    }
+  };
+
+  const handleDeleteFromGallery = async (uriToDelete) => {
+    Alert.alert('Delete Image', 'Are you sure you want to delete this photo?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          const updated = uploadedPictures.filter((uri) => uri !== uriToDelete);
+          setUploadedPictures(updated);
+          await AsyncStorage.setItem(
+            `uploadedPictures-${user.id}`,
+            JSON.stringify(updated)
+          );
+        },
+      },
+    ]);
+  };
+
   if (!user) return null;
 
+  // RENDER START
   return (
-    <SafeAreaView
-      style={{
-        flex: 1,
-        backgroundColor: user.theme?.pageBackground ?? '#eef2f5',
-      }}
-    >
+    <SafeAreaView style={{ flex: 1, backgroundColor: user.theme?.pageBackground ?? '#eef2f5' }}>
       <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
         <FlatList
           data={posts}
@@ -294,11 +390,7 @@ export default function Profile({ navigation, route }) {
                 style={{ position: 'absolute', top: 40, left: 15, zIndex: 10 }}
                 onPress={() => navigation.goBack()}
               >
-                <Icon
-                  name="arrow-back"
-                  size={28}
-                  color={user.theme?.textColor ?? '#fff'}
-                />
+                <Icon name="arrow-back" size={28} color={user.theme?.textColor ?? '#fff'} />
               </TouchableOpacity>
 
               {/* COVER PHOTO */}
@@ -308,10 +400,7 @@ export default function Profile({ navigation, route }) {
                     ? { uri: user.coverPhoto }
                     : require('../assets/cover_photo.png')
                 }
-                style={[
-                  styles.coverPhoto,
-                  { backgroundColor: user.theme?.headerBackground ?? '#ccc' },
-                ]}
+                style={[styles.coverPhoto, { backgroundColor: user.theme?.headerBackground ?? '#ccc' }]}
               />
 
               {/* PROFILE HEADER */}
@@ -330,135 +419,196 @@ export default function Profile({ navigation, route }) {
                           ? { uri: user.profilePic }
                           : require('../assets/placeholder.png')
                       }
-                      style={[
-                        styles.profilePic,
-                        { borderColor: user.theme?.profileBorderColor ?? '#fff' },
-                      ]}
+                      style={[styles.profilePic, { borderColor: user.theme?.profileBorderColor ?? '#fff' }]}
                     />
                   </TouchableOpacity>
-                  <Text
-                    style={{
-                      marginTop: 8,
-                      fontSize: 18,
-                      fontWeight: 'bold',
-                      color: user.theme?.textColor ?? '#222',
-                    }}
-                  >
+                  <Text style={{ marginTop: 8, fontSize: 18, fontWeight: 'bold', color: user.theme?.textColor ?? '#222' }}>
                     {user.username}
                   </Text>
                 </View>
 
+                {/* Action button behavior:
+                    - If own profile => Edit Profile
+                    - Else if already friend => maybe show 'Friends' or message (we check earlier)
+                    - Else if pending request (currentUser sent request to this user) => show 'Requested'
+                    - Else => show 'Add Friend' which sends a request
+                */}
                 <TouchableOpacity
-                  style={[
-                    styles.actionBtn,
-                    { backgroundColor: user.theme?.buttonBackground ?? '#0571d3' },
-                  ]}
-                  onPress={
-                    isOwnProfile
-                      ? () => navigation.navigate('EditProfile', { user })
-                      : handleAddFriend
-                  }
+                  style={[styles.actionBtn, { backgroundColor: user.theme?.buttonBackground ?? '#0571d3' }]}
+                  onPress={() => {
+                    if (isOwnProfile) return navigation.navigate('EditProfile', { user });
+                    // if already friends, maybe navigate or show message
+                    (async () => {
+                      try {
+                        const targetFriendsRaw = await AsyncStorage.getItem(`friends-${user.id}`);
+                        const targetFriends = targetFriendsRaw ? JSON.parse(targetFriendsRaw) : [];
+                        if (targetFriends.some((f) => f.id === currentUser?.id)) {
+                          Alert.alert('You are already friends');
+                          return;
+                        }
+                        if (hasPendingRequest) {
+                          Alert.alert('Request pending', 'You have already sent a friend request to this user.');
+                          return;
+                        }
+                        await handleAddFriend();
+                      } catch (e) {
+                        console.log(e);
+                      }
+                    })();
+                  }}
                 >
-                  <Text
-                    style={{
-                      color: user.theme?.buttonTextColor ?? '#fff',
-                      fontWeight: '600',
-                    }}
-                  >
-                    {isOwnProfile ? 'Edit Profile' : 'Add Friend'}
+                  <Text style={{ color: user.theme?.buttonTextColor ?? '#fff', fontWeight: '600' }}>
+                    {isOwnProfile
+                      ? 'Edit Profile'
+                      : friends.some(f => f.id === currentUser?.id)
+                      ? 'Friends ✅'
+                      : hasPendingRequest
+                      ? 'Requested'
+                      : 'Add Friend'}
                   </Text>
+
                 </TouchableOpacity>
               </View>
 
               {/* BIO */}
-              <Text
-                style={[
-                  styles.bioText,
-                  { color: user.theme?.textColor ?? '#222' },
-                ]}
-              >
+              <Text style={[styles.bioText, { color: user.theme?.textColor ?? '#222' }]}>
                 {user.bio || 'No bio yet.'}
               </Text>
 
               {/* FRIENDS & GALLERY */}
               <View style={styles.friendsGalleryRow}>
                 {/* FRIENDS SECTION */}
-                <View style={styles.friendsContainer}>
-                  <Text
-                    style={[
-                      styles.sectionTitle,
-                      { color: user.theme?.sectionTextColor ?? '#333' },
-                    ]}
-                  >
-                    Friends
-                  </Text>
-                  <View style={styles.friendsGalleryGrid}>
-                    {friends.length > 0 ? (
-                      friends.slice(0, 6).map((f, idx) => (
-                        <TouchableOpacity
-                          key={idx}
-                          style={styles.friendItem}
-                          onPress={() =>
-                            navigation.navigate('Profile', { userId: f.id })
-                          }
-                        >
-                          <Image
-                            source={
-                              f.profilePic
-                                ? { uri: f.profilePic }
-                                : require('../assets/placeholder.png')
-                            }
-                            style={styles.friendImg}
-                          />
-                        </TouchableOpacity>
-                      ))
-                    ) : (
-                      <Text
-                        style={{ color: user.theme?.textColor ?? '#555', fontStyle: 'italic' }}
-                      >
-                        No friends yet
-                      </Text>
-                    )}
-                    {friends.length > 6 && (
-                      <TouchableOpacity style={styles.viewAllFriendsBtn}>
-                        <Text
-                          style={{
-                            color: user.theme?.buttonBackground ?? '#0571d3',
-                            fontWeight: '500',
-                          }}
-                        >
-                          View all {friends.length} friends
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
+<View style={styles.friendsContainer}>
+  <Text
+    style={[
+      styles.sectionTitle,
+      { color: user.theme?.sectionTextColor ?? '#333' },
+    ]}
+  >
+    Friends
+  </Text>
+
+  <View style={friendStyles.friendsGrid}>
+    {friends.length > 0 ? (
+      friends.slice(0, 6).map((f, idx) => (
+        <TouchableOpacity
+          key={idx}
+          style={friendStyles.friendItem}
+          onPress={() => navigation.navigate('Profile', { userId: f.id })}
+        >
+          <Image
+            source={
+              f.profilePic
+                ? { uri: f.profilePic }
+                : require('../assets/placeholder.png')
+            }
+            style={friendStyles.friendImg}
+          />
+          <Text
+            style={[
+              friendStyles.friendName,
+              { color: user.theme?.textColor ?? '#222' },
+            ]}
+            numberOfLines={1}
+          >
+            {f.username || 'User'}
+          </Text>
+        </TouchableOpacity>
+      ))
+    ) : (
+      <Text
+        style={{
+          color: user.theme?.textColor ?? '#555',
+          fontStyle: 'italic',
+          textAlign: 'center',
+          width: '100%',
+        }}
+      >
+        No friends yet
+      </Text>
+    )}
+  </View>
+
+  {/* View All Friends button */}
+  {friends.length > 6 && (
+    <TouchableOpacity
+      style={friendStyles.viewAllBtn}
+      onPress={() =>
+        navigation.navigate('FriendsList', { userId: user.id, friends })
+      }
+    >
+      <Text style={friendStyles.viewAllText}>View All Friends</Text>
+    </TouchableOpacity>
+  )}
+</View>
+
 
                 {/* GALLERY SECTION */}
                 <View style={styles.galleryContainer}>
-                  <Text
-                    style={[
-                      styles.sectionTitle,
-                      { color: user.theme?.sectionTextColor ?? '#333' },
-                    ]}
-                  >
+                  <Text style={[styles.sectionTitle, { color: user.theme?.sectionTextColor ?? '#333' }]}>
                     Gallery
                   </Text>
-                  <View style={styles.friendsGalleryGrid}>
+
+                  <View style={galleryStyles.galleryGrid}>
                     {uploadedPictures.length > 0 ? (
                       uploadedPictures.slice(0, 6).map((uri, idx) => (
-                        <View key={idx} style={styles.galleryItem}>
-                          <Image source={{ uri }} style={styles.galleryImg} />
+                        <View key={idx} style={galleryStyles.galleryItem}>
+                          <TouchableOpacity
+                            onPress={() =>
+                              !isEditMode &&
+                              navigation.navigate('Gallery', {
+                                userId: user.id,
+                                currentUserId: currentUser?.id,
+                              })
+                            }
+                          >
+                            <Image source={{ uri }} style={galleryStyles.img} />
+                          </TouchableOpacity>
+                          {isOwnProfile && isEditMode && (
+                            <TouchableOpacity
+                              style={galleryStyles.deleteBtn}
+                              onPress={() => handleDeleteFromGallery(uri)}
+                            >
+                              <Icon name="close-circle" size={22} color="#ff4d4d" />
+                            </TouchableOpacity>
+                          )}
                         </View>
                       ))
                     ) : (
-                      <Text
-                        style={{ color: user.theme?.textColor ?? '#555', fontStyle: 'italic' }}
-                      >
+                      <Text style={{ color: user.theme?.textColor ?? '#555', fontStyle: 'italic' }}>
                         No pictures uploaded
                       </Text>
                     )}
                   </View>
+
+                  {/* 📸 Upload + Edit Buttons */}
+                  {isOwnProfile && (
+                    <View style={{ alignItems: 'center', marginTop: 10 }}>
+                      {!isEditMode && (
+                        <TouchableOpacity
+                          style={[styles.uploadBtn, {
+                            backgroundColor: user.theme?.buttonBackground ?? '#0571d3',
+                          }]}
+                          onPress={handleUploadToGallery}
+                        >
+                          <Text style={{ color: user.theme?.buttonTextColor ?? '#fff', fontWeight: '600' }}>
+                            Upload to Gallery
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity
+                        style={[styles.editBtn, {
+                          backgroundColor: isEditMode ? '#ff9800' : '#444',
+                          marginTop: 6,
+                        }]}
+                        onPress={() => setIsEditMode(!isEditMode)}
+                      >
+                        <Text style={{ color: '#fff', fontWeight: '600' }}>
+                          {isEditMode ? 'Done' : 'Edit Gallery'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               </View>
             </>
@@ -472,3 +622,66 @@ export default function Profile({ navigation, route }) {
     </SafeAreaView>
   );
 }
+
+const galleryStyles = StyleSheet.create({
+  galleryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  galleryItem: {
+    width: '48%',
+    aspectRatio: 1,
+    marginBottom: 6,
+    borderRadius: 8,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  img: { width: '100%', height: '100%' },
+  deleteBtn: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 50,
+  },
+});
+
+const friendStyles = StyleSheet.create({
+  friendsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start', // ✅ bring them closer instead of spaced out
+    marginTop: 6,
+    gap: 10, // ✅ small spacing between avatars
+  },
+  friendItem: {
+    width: 65, // ✅ fixed small width instead of %
+    alignItems: 'center',
+  },
+  friendImg: {
+    width: 65,
+    height: 65,
+    borderRadius: 32.5,
+    backgroundColor: '#ccc',
+    marginBottom: 4,
+  },
+  friendName: {
+    fontSize: 11,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  viewAllBtn: {
+    backgroundColor: '#007bff',
+    borderRadius: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    alignSelf: 'center',
+    marginTop: 6,
+  },
+  viewAllText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+});
+

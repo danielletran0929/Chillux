@@ -16,6 +16,7 @@ import ChangeEmail from './screens/ChangeEmail';
 import ChangePassword from './screens/ChangePassword';
 import ChangeUsername from './screens/ChangeUsername';
 import EditProfile from './screens/EditProfile';
+import Gallery from './screens/Gallery';
 
 const Stack = createStackNavigator();
 
@@ -60,6 +61,7 @@ export default function App() {
           <Stack.Screen name="ChangePassword" component={ChangePassword} />
           <Stack.Screen name="ChangeUsername" component={ChangeUsername} />
           <Stack.Screen name="EditProfile" component={EditProfile} />
+          <Stack.Screen name="Gallery" component={Gallery} />
         </>
       ) : (
         <>

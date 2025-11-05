@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { launchImageLibrary } from 'react-native-image-picker';
+import * as ImagePicker from 'expo-image-picker';
 import createStyles from '../styles/createPostStyles';
 
 export default function CreatePost({ navigation }) {
@@ -33,22 +33,29 @@ export default function CreatePost({ navigation }) {
   const styles = createStyles(theme);
 
   const pickImages = async () => {
-    const options = {
-      mediaType: 'photo',
-      selectionLimit: 5, // allows multiple selection
-      includeBase64: false,
-    };
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'We need access to your photos to continue.');
+      return;
+    }
 
-    launchImageLibrary(options, response => {
-      if (response.didCancel) return;
-      if (response.errorCode) {
-        Alert.alert('Error', response.errorMessage || 'Failed to pick images');
-        return;
+    try {
+      // Expo’s ImagePicker doesn’t support true multi-select,
+      // so we allow picking one image at a time and append it
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: false, // Expo does not yet support multiple
+        quality: 1,
+      });
+
+      if (!result.canceled) {
+        const selected = result.assets.map(asset => asset.uri);
+        setImages(prev => [...prev, ...selected]);
       }
-
-      const newUris = response.assets?.map(asset => asset.uri) || [];
-      setImages(prev => [...prev, ...newUris]);
-    });
+    } catch (error) {
+      Alert.alert('Error', 'Something went wrong while picking the image.');
+      console.error(error);
+    }
   };
 
   const handlePost = async () => {
@@ -81,15 +88,27 @@ export default function CreatePost({ navigation }) {
   };
 
   return (
-    <ScrollView style={[styles.pageContainer, { backgroundColor: theme.pageBackground || '#f2f2f2' }]}>
+    <ScrollView
+      style={[
+        styles.pageContainer,
+        { backgroundColor: theme.pageBackground || '#f2f2f2' },
+      ]}
+    >
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-        <Text style={[styles.backButtonText, { color: theme.textColor || '#000' }]}>⬅ Back</Text>
+        <Text style={[styles.backButtonText, { color: theme.textColor || '#000' }]}>
+          ⬅ Back
+        </Text>
       </TouchableOpacity>
 
-      <Text style={[styles.headerText, { color: theme.headerTextColor || '#222' }]}>Create Post</Text>
+      <Text style={[styles.headerText, { color: theme.headerTextColor || '#222' }]}>
+        Create Post
+      </Text>
 
       <TextInput
-        style={[styles.postInput, { color: theme.textColor || '#000', borderColor: theme.borderColor || '#ccc' }]}
+        style={[
+          styles.postInput,
+          { color: theme.textColor || '#000', borderColor: theme.borderColor || '#ccc' },
+        ]}
         placeholder="Write something..."
         value={text}
         onChangeText={setText}
@@ -101,7 +120,9 @@ export default function CreatePost({ navigation }) {
         style={[styles.postButton, { backgroundColor: theme.buttonBackground || '#0571d3' }]}
         onPress={pickImages}
       >
-        <Text style={[styles.postBtnText, { color: theme.buttonTextColor || '#fff' }]}>📸 Add Images</Text>
+        <Text style={[styles.postBtnText, { color: theme.buttonTextColor || '#fff' }]}>
+          📸 Add Image
+        </Text>
       </TouchableOpacity>
 
       {images.length > 0 && (
@@ -121,7 +142,9 @@ export default function CreatePost({ navigation }) {
         disabled={!text.trim() && images.length === 0}
         onPress={handlePost}
       >
-        <Text style={[styles.postBtnText, { color: theme.buttonTextColor || '#fff' }]}>Post</Text>
+        <Text style={[styles.postBtnText, { color: theme.buttonTextColor || '#fff' }]}>
+          Post
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );

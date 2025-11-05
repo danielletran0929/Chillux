@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import { LinearGradient } from 'react-native-linear-gradient';
+import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import createStyles from '../styles/newsFeedStyles';
 
@@ -57,11 +57,21 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
       async function loadTheme() {
         try {
           const savedUser = await AsyncStorage.getItem('currentUser');
-          if (savedUser) {
-            const parsed = JSON.parse(savedUser);
-            setTheme(parsed.theme || {});
-            setCurrentUser(parsed);
-          }
+            if (savedUser) {
+              const parsed = JSON.parse(savedUser);
+              const allUsersRaw = await AsyncStorage.getItem('users');
+              const allUsers = allUsersRaw ? JSON.parse(allUsersRaw) : [];
+
+              // Find the latest version of this user
+              const latestUser = allUsers.find((user) => user.id === parsed.id) || parsed;
+
+              // Update AsyncStorage to ensure future screens use the fresh version
+              await AsyncStorage.setItem('currentUser', JSON.stringify(latestUser));
+
+              setTheme(latestUser.theme || {});
+              setCurrentUser(latestUser);
+            }
+
         } catch (err) {
           console.log('Load Theme Error:', err);
         }
@@ -73,9 +83,9 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
   const mergedTheme = { ...defaultTheme, ...theme };
   const styles = createStyles(mergedTheme);
 
-  const getAvatar = (u) =>
-    u?.profilePic ?? u?.profilePhoto ?? u?.profilePhotoUrl ?? u?.avatarUrl ?? null;
-  const getUsername = (u) => u?.username ?? u?.name ?? 'User';
+  const getAvatar = (user) =>
+    user?.profilePic ?? user?.profilePhoto ?? user?.profilePhotoUrl ?? user?.avatarUrl ?? null;
+  const getUsername = (user) => user?.username ?? user?.name ?? 'User';
 
   const allEmojis = useMemo(() => {
     const emojiList = [];
@@ -108,29 +118,29 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
             AsyncStorage.getItem('customEmojis'),
           ]);
 
-          const parsedUsers = usersRaw ? JSON.parse(usersRaw) : [];
+          const allUsers = usersRaw ? JSON.parse(usersRaw) : [];
           const parsedPosts = postsRaw ? JSON.parse(postsRaw) : [];
 
           const normalized = parsedPosts.map((post) => {
-            const owner = parsedUsers.find((u) => u.id === post.userId);
+            const owner = allUsers.find((user) => user.id === post.userId);
             return {
               ...post,
               user: post.user ?? getUsername(owner),
               profilePic: getAvatar(owner) ?? post.profilePic,
               theme: owner?.theme ?? post.theme ?? defaultTheme,
-              comments: (post.comments || []).map((c) => {
-                const commentOwner = parsedUsers.find((u) => u.id === c.userId);
+              comments: (post.comments || []).map((comment) => {
+                const commentOwner = allUsers.find((user) => user.id === comment.userId);
                 return {
-                  ...c,
-                  user: c.user ?? getUsername(commentOwner),
-                  profilePic: getAvatar(commentOwner) ?? c.profilePic,
+                  ...comment,
+                  user: comment.user ?? getUsername(commentOwner),
+                  profilePic: getAvatar(commentOwner) ?? comment.profilePic,
                 };
               }),
             };
           });
 
           if (cancelled) return;
-          setUsers(parsedUsers);
+          setUsers(allUsers);
           setPosts(normalized);
           const parsedCustom = customRaw ? JSON.parse(customRaw) : [];
           setCustomEmojis(parsedCustom);
@@ -138,11 +148,23 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
 
           // ---------- NEW: load friend requests for current user ----------
           const currentRaw = await AsyncStorage.getItem('currentUser');
-          const parsedCurrent = currentRaw ? JSON.parse(currentRaw) : null;
-          if (parsedCurrent) {
-            const frRaw = await AsyncStorage.getItem(`friendRequests-${parsedCurrent.id}`);
-            const parsedFR = frRaw ? JSON.parse(frRaw) : [];
-            setFriendRequests(parsedFR);
+          const currentUserData = currentRaw ? JSON.parse(currentRaw) : null;
+          if (currentUserData) {
+            const friendRequestsRaw = await AsyncStorage.getItem(`friendRequests-${currentUserData.id}`);
+            const friendRequestsList = friendRequestsRaw ? JSON.parse(friendRequestsRaw) : [];
+
+            // Add missing profile pictures using users data
+            const enhancedFR = friendRequestsList.map((request) => {
+              if (request.profilePic) return request; // already has a profilePic
+              const senderUser = allUsers.find((user) => user.id === request.fromId);
+              return {
+                ...request,
+                profilePic: senderUser?.profilePic ?? senderUser?.profilePhoto ?? null,
+              };
+            });
+
+            setFriendRequests(enhancedFR);
+
           } else {
             setFriendRequests([]);
           }
@@ -334,19 +356,19 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
 
         {comments.length > 0 && (
           <View style={postStyles.commentsContainer}>
-            {comments.slice(0, 2).map((c, i) => (
+            {comments.slice(0, 2).map((comment, i) => (
               <View style={postStyles.commentRow} key={i}>
-                <TouchableOpacity onPress={() => navigation.navigate('Profile', { userId: c.userId })}>
+                <TouchableOpacity onPress={() => navigation.navigate('Profile', { userId: comment.userId })}>
                   <Image
-                    source={c.profilePic ? { uri: c.profilePic } : require('../assets/placeholder.png')}
+                    source={comment.profilePic ? { uri: comment.profilePic } : require('../assets/placeholder.png')}
                     style={postStyles.profilePic}
                   />
                 </TouchableOpacity>
                 <View>
-                  <TouchableOpacity onPress={() => navigation.navigate('Profile', { userId: c.userId })}>
-                    <Text style={postStyles.commentText}>{c.user}:</Text>
+                  <TouchableOpacity onPress={() => navigation.navigate('Profile', { userId: comment.userId })}>
+                    <Text style={postStyles.commentText}>{comment.user}:</Text>
                   </TouchableOpacity>
-                  <Text style={postStyles.commentText}>{c.text}</Text>
+                  <Text style={postStyles.commentText}>{comment.text}</Text>
                 </View>
               </View>
             ))}
@@ -398,73 +420,117 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
       setFriendRequests([]);
     }
   };
-
-  const acceptRequest = async (senderId) => {
+  const addFriendBothSides = async (userA, userB) => {
   try {
-    // current user
-    const currentUserRaw = await AsyncStorage.getItem('currentUser');
-    const currentUser = currentUserRaw ? JSON.parse(currentUserRaw) : null;
-    if (!currentUser) return;
+    const friendsKeyA = `friends-${userA.id}`;
+    const friendsKeyB = `friends-${userB.id}`;
 
-    // load all users
+    const friendsOfAData = await AsyncStorage.getItem(friendsKeyA);
+    const friendsOfAList = friendsOfAData ? JSON.parse(friendsOfAData) : [];
+
+    const friendsBRaw = await AsyncStorage.getItem(friendsKeyB);
+    const friendsB = friendsBRaw ? JSON.parse(friendsBRaw) : [];
+
+    const entryForA = {
+      id: userB.id,
+      username: userB.username,
+      profilePic: userB.profilePhoto ?? userB.profilePic ?? null,
+    };
+    const entryForB = {
+      id: userA.id,
+      username: userA.username,
+      profilePic: userA.profilePhoto ?? userA.profilePic ?? null,
+    };
+
+    const updatedA = friendsOfAList.some((f) => f.id === userB.id)
+      ? friendsOfAList
+      : [...friendsOfAList, entryForA];
+
+    const updatedB = friendsB.some((f) => f.id === userA.id)
+      ? friendsB
+      : [...friendsB, entryForB];
+
+    await AsyncStorage.setItem(friendsKeyA, JSON.stringify(updatedA));
+    await AsyncStorage.setItem(friendsKeyB, JSON.stringify(updatedB));
+  } catch (err) {
+    console.log('addFriendBothSides error', err);
+  }
+};
+
+  const acceptRequest = async (request) => {
+  try {
+    const currentUserRaw = await AsyncStorage.getItem('currentUser');
+    const storedUser = currentUserRaw ? JSON.parse(currentUserRaw) : null;
+    if (!storedUser) return;
+
+
     const usersRaw = await AsyncStorage.getItem('users');
     const users = usersRaw ? JSON.parse(usersRaw) : [];
 
-    // get sender info
-    const sender = users.find((u) => u.id === senderId);
-    if (!sender) return;
+    // senderUser info
+    const senderUser = users.find((user) => user.id === request.fromId);
+    if (!senderUser) return;
 
-    // get each user’s friend list
+    // get friends list for both
     const currentFriendsRaw = await AsyncStorage.getItem(`friends-${currentUser.id}`);
-    const senderFriendsRaw = await AsyncStorage.getItem(`friends-${sender.id}`);
+    const senderFriendsRawData = await AsyncStorage.getItem(`friends-${senderUser.id}`);
 
     const currentFriends = currentFriendsRaw ? JSON.parse(currentFriendsRaw) : [];
-    const senderFriends = senderFriendsRaw ? JSON.parse(senderFriendsRaw) : [];
+    const senderFriends = senderFriendsRawData ? JSON.parse(senderFriendsRawData) : [];
 
     // check if they’re already friends
-    const alreadyFriends = currentFriends.some((f) => f.id === sender.id);
+    const alreadyFriends = currentFriends.some((f) => f.id === senderUser.id);
     if (!alreadyFriends) {
-      // add each other
-      currentFriends.push({
-        id: sender.id,
-        username: sender.username,
-        profilePic: sender.profilePhoto ?? sender.profilePic ?? null,
-      });
+  await addFriendBothSides(currentUser, senderUser);
+}
 
-      senderFriends.push({
-        id: currentUser.id,
-        username: currentUser.username,
-        profilePic: currentUser.profilePhoto ?? currentUser.profilePic ?? null,
-      });
+  const syncProfileAcrossFriends = async (updatedUser) => {
+  try {
+    const usersRaw = await AsyncStorage.getItem('users');
+    const users = usersRaw ? JSON.parse(usersRaw) : [];
 
-      // save back
-      await AsyncStorage.setItem(`friends-${currentUser.id}`, JSON.stringify(currentFriends));
-      await AsyncStorage.setItem(`friends-${sender.id}`, JSON.stringify(senderFriends));
+    for (const friend of users) {
+      const key = `friends-${friend.id}`;
+      const listRaw = await AsyncStorage.getItem(key);
+      const list = listRaw ? JSON.parse(listRaw) : [];
+      const updatedList = list.map(f =>
+        f.id === updatedUser.id
+          ? { ...f, profilePic: updatedUser.profilePic, username: updatedUser.username }
+          : f
+      );
+      await AsyncStorage.setItem(key, JSON.stringify(updatedList));
     }
-
-    // remove the request
-    const reqKey = `friendRequests-${currentUser.id}`;
-    const reqRaw = await AsyncStorage.getItem(reqKey);
-    const requests = reqRaw ? JSON.parse(reqRaw) : [];
-    const updatedRequests = requests.filter((r) => r.id !== sender.id);
-    await AsyncStorage.setItem(reqKey, JSON.stringify(updatedRequests));
-
-    Alert.alert('Friend request accepted!');
   } catch (err) {
-    console.log('acceptRequest error:', err);
+    console.log('syncProfileAcrossFriends error', err);
   }
 };
 
 
-  const declineRequest = async (req) => {
+    // remove the request
+    const friendRequestsKey = `friendRequests-${currentUser.id}`;
+    const reqRaw = await AsyncStorage.getItem(friendRequestsKey);
+    const requests = reqRaw ? JSON.parse(reqRaw) : [];
+    const updatedRequests = requests.filter((r) => r.fromId !== request.fromId);
+    await AsyncStorage.setItem(friendRequestsKey, JSON.stringify(updatedRequests));
+    setFriendRequests(updatedRequests);
+
+    Alert.alert('Success', 'Friend request accepted!');
+  } catch (err) {
+    console.log('acceptRequest error:', err);
+    Alert.alert('Error', 'Something went wrong while accepting.');
+  }
+};
+
+
+  const declineRequest = async (request) => {
     if (!currentUser) return;
     try {
-      const frKey = `friendRequests-${currentUser.id}`;
-      const frRaw = await AsyncStorage.getItem(frKey);
-      let frList = frRaw ? JSON.parse(frRaw) : [];
-      frList = frList.filter((r) => !(r.fromId === req.fromId));
-      await AsyncStorage.setItem(frKey, JSON.stringify(frList));
-      setFriendRequests(frList);
+      const friendRequestsKey = `friendRequests-${currentUser.id}`;
+      const friendRequestsRaw = await AsyncStorage.getItem(friendRequestsKey);
+      let friendsList = friendRequestsRaw ? JSON.parse(friendRequestsRaw) : [];
+      friendsList = friendsList.filter((r) => r.fromId !== request.fromId);
+      await AsyncStorage.setItem(friendRequestsKey, JSON.stringify(friendsList));
+      setFriendRequests(friendsList);
       Alert.alert('Request declined');
     } catch (err) {
       console.log('declineRequest error', err);
@@ -664,74 +730,99 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
 
         {/* ---------- NEW: Friend Requests modal ---------- */}
         <Modal visible={showRequestsModal} animationType="slide" transparent>
-          <View style={[styles.modalBackdrop, { justifyContent: 'center', padding: 20 }]}>
-            <View style={[styles.bigEmojiSheet, { padding: 16 }]}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={[styles.bigEmojiTitle, { marginBottom: 8 }]}>Friend Requests</Text>
-                <TouchableOpacity onPress={() => setShowRequestsModal(false)}>
-                  <Icon name="close" size={24} />
-                </TouchableOpacity>
-              </View>
+  <View style={[styles.modalBackdrop, { justifyContent: 'center', padding: 20 }]}>
+    <View style={[styles.bigEmojiSheet, { padding: 16 }]}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Text style={[styles.bigEmojiTitle, { marginBottom: 8 }]}>Friend Requests</Text>
+        <TouchableOpacity onPress={() => setShowRequestsModal(false)}>
+          <Icon name="close" size={24} />
+        </TouchableOpacity>
+      </View>
 
-              {friendRequests.length === 0 ? (
-                <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-                  <Text>No friend requests</Text>
-                </View>
-              ) : (
-                <ScrollView style={{ maxHeight: 320 }}>
-                  {friendRequests.map((req, idx) => (
-                    <View
-                      key={`${req.fromId}-${idx}`}
-                      style={{
-                        paddingVertical: 10,
-                        borderBottomWidth: 1,
-                        borderBottomColor: '#eee',
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <View style={{ flex: 1, paddingRight: 10 }}>
-                        <Text style={{ fontWeight: '600' }}>
-                          {req.fromUsername} sent you a friend request
-                        </Text>
-                        {req.message ? <Text style={{ color: '#666' }}>{req.message}</Text> : null}
-                      </View>
-                      <View style={{ flexDirection: 'row', gap: 8 }}>
-                        <TouchableOpacity
-                          onPress={() => acceptRequest(req)}
-                          style={{
-                            backgroundColor: '#28a745',
-                            paddingHorizontal: 12,
-                            paddingVertical: 8,
-                            borderRadius: 8,
-                            marginRight: 6,
-                          }}
-                        >
-                          <Text style={{ color: '#fff', fontWeight: '700' }}>Accept</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => declineRequest(req)}
-                          style={{
-                            backgroundColor: '#e63946',
-                            paddingHorizontal: 12,
-                            paddingVertical: 8,
-                            borderRadius: 8,
-                          }}
-                        >
-                          <Text style={{ color: '#fff', fontWeight: '700' }}>Decline</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ))}
-                </ScrollView>
-              )}
-            </View>
-          </View>
-        </Modal>
+      {friendRequests.length === 0 ? (
+        <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+          <Text>No friend requests</Text>
+        </View>
+      ) : (
+        <ScrollView
+  style={{
+    width: '100%',
+    maxHeight: 350,
+  }}
+  contentContainerStyle={{
+    padding: 10,
+  }}
+>
+  {friendRequests.map((request, idx) => (
+    <View
+      key={idx}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: '#f7f7f7',
+        borderRadius: 10,
+        padding: 10,
+        marginBottom: 10, // <-- THIS is what spaces them apart vertically
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 2,
+      }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+        <Image
+          source={
+            request.profilePic
+              ? { uri: request.profilePic }
+              : require('../assets/placeholder.png')
+          }
+          style={{
+            width: 45,
+            height: 45,
+            borderRadius: 22.5,
+            marginRight: 10,
+          }}
+        />
+        <Text style={{ fontWeight: '600', fontSize: 15 }}>{request.fromUsername}</Text>
+      </View>
+
+      <View style={{ flexDirection: 'row' }}>
+        <TouchableOpacity
+          onPress={() => acceptRequest(request)}
+          style={{
+            backgroundColor: '#28a745',
+            paddingVertical: 6,
+            paddingHorizontal: 12,
+            borderRadius: 6,
+            marginRight: 5,
+          }}
+        >
+          <Text style={{ color: 'white', fontWeight: '600' }}>Accept</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => declineRequest(request)}
+          style={{
+            backgroundColor: '#e63946',
+            paddingVertical: 6,
+            paddingHorizontal: 12,
+            borderRadius: 6,
+          }}
+        >
+          <Text style={{ color: 'white', fontWeight: '600' }}>Decline</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  ))}
+</ScrollView>
+      )}
+    </View>
+  </View>
+</Modal>
+
         {/* ------------------------------------------------- */}
       </LinearGradient>
     </KeyboardAvoidingView>
   );
 }
-
