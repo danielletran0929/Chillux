@@ -275,7 +275,11 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
         )}
 
         <View style={postStyles.postHeader}>
-          <TouchableOpacity onPress={() => navigation.navigate('ProfileView', { userId: item.userId })}>
+          <TouchableOpacity onPress={() => navigation.navigate('ProfileStack', {
+  screen: 'Profile',
+  params: { userId: item.user_id },
+})
+}>
             <Image
               source={item.profilePic ? { uri: item.profilePic } : require('../assets/placeholder.png')}
               style={postStyles.userImgPlaceholder}
@@ -283,8 +287,10 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
           </TouchableOpacity>
           <TouchableOpacity
             style={{ marginLeft: 8 }}
-            onPress={() => navigation.navigate('ProfileView', { userId: item.userId })}
-          >
+            onPress={() => navigation.navigate('ProfileStack', {
+  screen: 'Profile',
+  params: { userId: item.user_id },
+})}>
             <Text style={postStyles.commentText}>{item.user}</Text>
             <Text style={postStyles.commentText}>{item.time}</Text>
           </TouchableOpacity>
@@ -393,14 +399,20 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
           <View style={postStyles.commentsContainer}>
             {comments.slice(0, 2).map((comment, i) => (
               <View style={postStyles.commentRow} key={i}>
-                <TouchableOpacity onPress={() => navigation.navigate('ProfileView', { userId: comment.userId })}>
+                <TouchableOpacity onPress={() => navigation.navigate('ProfileStack', {
+  screen: 'Profile',
+  params: { userId: item.user_id },
+})}>
                   <Image
                     source={comment.profilePic ? { uri: comment.profilePic } : require('../assets/placeholder.png')}
                     style={postStyles.profilePic}
                   />
                 </TouchableOpacity>
                 <View>
-                  <TouchableOpacity onPress={() => navigation.navigate('ProfileView', { userId: comment.userId })}>
+                  <TouchableOpacity onPress={() => navigation.navigate('ProfileStack', {
+  screen: 'Profile',
+  params: { userId: item.user_id },
+})}>
                     <Text style={postStyles.commentText}>{comment.user}:</Text>
                   </TouchableOpacity>
                   <Text style={postStyles.commentText}>{comment.text}</Text>
@@ -629,8 +641,11 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
             <View style={styles.headerRight}>
               <TouchableOpacity
                 style={styles.userInfoRow}
-                onPress={() => navigation.navigate('ProfileView', { userId: currentUser?.id })}
-              >
+                onPress={() => navigation.navigate('ProfileStack', {
+  screen: 'Profile',
+  params: { userId: item.user_id },
+})}
+>
                 <Image
                   source={
                     currentUser?.profilePic
@@ -653,7 +668,10 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
         >
           <TouchableOpacity
             style={styles.userInfoRow}
-            onPress={() => navigation.navigate('ProfileView', { userId: currentUser?.id })}
+            onPress={() => navigation.navigate('ProfileStack', {
+            screen: 'Profile',
+            params: { userId: item.user_id },
+          })}
           >
             <Image
               source={
