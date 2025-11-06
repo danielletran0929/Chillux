@@ -341,13 +341,13 @@ export default function PostCard({
             style={[
               styles.commentInput,
               {
-                backgroundColor: theme.inputBackground,
+                backgroundColor: theme.commentText,
                 color: theme.textColor,
                 borderColor: theme.profileBorderColor,
               },
             ]}
             placeholder="Write a comment..."
-            placeholderTextColor={theme.secondaryTextColor}
+            placeholderTextColor={theme.textColor}
             value={commentText}
             onChangeText={setCommentText}
           />
