@@ -9,16 +9,17 @@ import {
   StyleSheet,
   Alert,
   ImageBackground,
+  Modal,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { ColorPicker } from 'react-native-color-picker'; // ✅ NEW IMPORT
 import { themePresets } from '../styles/editProfileStyles';
 
 export default function EditProfile({ navigation, route }) {
   const user = route.params?.user || {};
 
-  // Default theme
   const defaultTheme = {
     pageBackground: '#eef2f5',
     headerBackground: '#38b6ff',
@@ -44,9 +45,8 @@ export default function EditProfile({ navigation, route }) {
   const [postBackground, setPostBackground] = useState(theme.postBackground);
   const [profileBorderColor, setProfileBorderColor] = useState(theme.profileBorderColor);
 
-  const colorOptions = [
-    '#000', '#ff4d4d', '#1e90ff', '#32cd32', '#9b59b6', '#edb51a', '#ffffff', '#eef2f5'
-  ];
+  // For opening color picker modals
+  const [activePicker, setActivePicker] = useState(null);
 
   const pickImage = async (setter) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -90,13 +90,13 @@ export default function EditProfile({ navigation, route }) {
         bio,
         backgroundImage,
         theme: {
-          pageBackground: pageBackground || defaultTheme.pageBackground,
-          headerBackground: headerBackground || defaultTheme.headerBackground,
-          buttonBackground: buttonBackground || defaultTheme.buttonBackground,
-          buttonTextColor: buttonTextColor || defaultTheme.buttonTextColor,
-          textColor: textColor || defaultTheme.textColor,
-          postBackground: postBackground || defaultTheme.postBackground,
-          profileBorderColor: profileBorderColor || defaultTheme.profileBorderColor,
+          pageBackground,
+          headerBackground,
+          buttonBackground,
+          buttonTextColor,
+          textColor,
+          postBackground,
+          profileBorderColor,
         },
       };
 
@@ -108,7 +108,7 @@ export default function EditProfile({ navigation, route }) {
       if (idx !== -1) users[idx] = updatedUser;
       else users.push(updatedUser);
       await AsyncStorage.setItem('users', JSON.stringify(users));
-  
+
       navigation.goBack();
     } catch (err) {
       console.log('Save Profile Error:', err);
@@ -135,6 +135,7 @@ export default function EditProfile({ navigation, route }) {
         >
           <Text style={[styles.title, { color: textColor }]}>Edit Profile</Text>
 
+          {/* Profile Picture */}
           <Text style={[styles.label, { color: textColor }]}>Profile Picture</Text>
           <TouchableOpacity onPress={() => pickImage(setProfilePic)}>
             <Image
@@ -144,6 +145,7 @@ export default function EditProfile({ navigation, route }) {
             <Text style={{ color: textColor }}>Change</Text>
           </TouchableOpacity>
 
+          {/* Cover Photo */}
           <Text style={[styles.label, { color: textColor }]}>Cover Photo</Text>
           <TouchableOpacity onPress={() => pickImage(setCoverPhoto)}>
             <Image
@@ -153,6 +155,7 @@ export default function EditProfile({ navigation, route }) {
             <Text style={{ color: textColor }}>Change</Text>
           </TouchableOpacity>
 
+          {/* Bio */}
           <Text style={[styles.label, { color: textColor }]}>Bio</Text>
           <TextInput
             value={bio}
@@ -162,12 +165,15 @@ export default function EditProfile({ navigation, route }) {
             placeholderTextColor="#666"
           />
 
+          {/* Background Image */}
           <TouchableOpacity onPress={() => pickImage(setBackgroundImage)} style={styles.themeButton}>
             <Text style={styles.themeButtonText}>Background Image</Text>
             <Icon name="image" size={22} color="#333" />
           </TouchableOpacity>
 
+          {/* Theme customization with color pickers */}
           <Text style={[styles.sectionTitle, { color: textColor }]}>Custom Theme</Text>
+
           {[
             ['Page Background', pageBackground, setPageBackground],
             ['Header Background', headerBackground, setHeaderBackground],
@@ -177,23 +183,19 @@ export default function EditProfile({ navigation, route }) {
             ['Post Card Background', postBackground, setPostBackground],
             ['Profile Border Color', profileBorderColor, setProfileBorderColor],
           ].map(([label, value, setter]) => (
-            <View key={label}>
+            <View key={label} style={{ marginVertical: 10 }}>
               <Text style={[styles.label, { color: textColor }]}>{label}</Text>
-              <View style={styles.row}>
-                {colorOptions.map((c) => (
-                  <TouchableOpacity
-                    key={c + label}
-                    onPress={() => setter(c)}
-                    style={[
-                      styles.colorCircle,
-                      { backgroundColor: c, borderWidth: value === c ? 3 : 1 },
-                    ]}
-                  />
-                ))}
-              </View>
+              <TouchableOpacity
+                onPress={() => setActivePicker({ label, setter })}
+                style={[
+                  styles.colorPreview,
+                  { backgroundColor: value, borderColor: '#333' },
+                ]}
+              />
             </View>
           ))}
 
+          {/* Presets */}
           <Text style={[styles.sectionTitle, { color: textColor }]}>Theme Presets</Text>
           <View style={styles.row}>
             {Object.keys(themePresets).map((presetName) => {
@@ -212,6 +214,7 @@ export default function EditProfile({ navigation, route }) {
             })}
           </View>
 
+          {/* Save Button */}
           <TouchableOpacity
             onPress={saveProfile}
             style={[styles.saveButton, { backgroundColor: buttonBackground }]}
@@ -219,6 +222,28 @@ export default function EditProfile({ navigation, route }) {
             <Text style={{ color: buttonTextColor, fontWeight: 'bold' }}>Save Changes</Text>
           </TouchableOpacity>
         </ScrollView>
+
+        {/* Modal Color Picker */}
+        <Modal visible={!!activePicker} animationType="slide" transparent={true}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>{activePicker?.label}</Text>
+              <ColorPicker
+                onColorSelected={(color) => {
+                  activePicker?.setter(color);
+                  setActivePicker(null);
+                }}
+                style={{ flex: 1 }}
+              />
+              <TouchableOpacity
+                onPress={() => setActivePicker(null)}
+                style={styles.closeButton}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
     </ImageBackground>
   );
@@ -226,11 +251,11 @@ export default function EditProfile({ navigation, route }) {
 
 const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: 'bold', margin: 20 },
-  label: { fontWeight: 'bold', marginTop: 20, marginBottom: 8 },
+  label: { fontWeight: 'bold', marginTop: 10, marginBottom: 6 },
   profileImage: { width: 100, height: 100, borderRadius: 50, borderWidth: 3 },
   coverPhoto: { width: '100%', height: 150, borderRadius: 10 },
   bioInput: { borderWidth: 2, borderRadius: 6, padding: 10, backgroundColor: '#fff' },
-  sectionTitle: { fontSize: 20, fontWeight: 'bold', marginTop: 30 },
+  sectionTitle: { fontSize: 20, fontWeight: 'bold', marginTop: 20 },
   themeButton: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -242,6 +267,32 @@ const styles = StyleSheet.create({
   themeButtonText: { fontWeight: 'bold' },
   saveButton: { padding: 15, marginTop: 30, borderRadius: 12, alignItems: 'center' },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 10 },
-  colorCircle: { width: 32, height: 32, borderRadius: 16, borderColor: '#333' },
   presetButton: { padding: 10, borderRadius: 8, margin: 5 },
+  colorPreview: {
+    width: 60,
+    height: 30,
+    borderWidth: 1,
+    borderRadius: 8,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#000000AA',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '85%',
+    height: 400,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+  },
+  modalTitle: { fontWeight: 'bold', fontSize: 18, marginBottom: 10 },
+  closeButton: {
+    marginTop: 10,
+    backgroundColor: '#333',
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
 });
