@@ -132,7 +132,7 @@ export default function PostCard({
         )}
 
         <TouchableOpacity
-          onPress={() => navigation.navigate('Profile', { userId: post.userId })}
+          onPress={() => navigation.navigate('ProfileView', { userId: post.userId })}
         >
           <Image
             source={
@@ -152,7 +152,7 @@ export default function PostCard({
 
         <TouchableOpacity
           style={{ marginLeft: 8 }}
-          onPress={() => navigation.navigate('Profile', { userId: post.userId })}
+          onPress={() => navigation.navigate('ProfileView', { userId: post.userId })}
         >
           <Text style={[styles.username, { color: theme.textColor }]}>
             {post.user}
@@ -300,7 +300,7 @@ export default function PostCard({
               <View key={idx} style={styles.commentRow}>
                 <TouchableOpacity
                   onPress={() =>
-                    navigation.navigate('Profile', { userId: comment.userId })
+                    navigation.navigate('ProfileView', { userId: comment.userId })
                   }
                 >
                   <Image
@@ -323,7 +323,7 @@ export default function PostCard({
                 >
                   <TouchableOpacity
                     onPress={() =>
-                      navigation.navigate('Profile', { userId: comment.userId })
+                      navigation.navigate('ProfileView', { userId: comment.userId })
                     }
                   >
                     <Text style={[styles.commentUser, { color: theme.textColor }]}>
