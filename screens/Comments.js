@@ -95,7 +95,7 @@ export default function CommentPage({ route, navigation }) {
                 <View style={styles.commentRow}>
                   <TouchableOpacity
                     onPress={() =>
-                      navigation.navigate('Profile', { userId: item.userId })
+                      navigation.navigate('ProfileView', { userId: item.userId })
                     }>
                     <Image
                       source={item.profilePic ? { uri: item.profilePic } : placeholderPic}
@@ -112,7 +112,7 @@ export default function CommentPage({ route, navigation }) {
                       },
                     ]}
                   >
-                  <TouchableOpacity onPress={() => navigation.navigate('Profile', { userId: c.userId })}>
+                  <TouchableOpacity onPress={() => navigation.navigate('ProfileView', { userId: c.userId })}>
                     <Text style={[styles.commentUser, { color: theme.textColor || '#000' }]}>
                       {item.user}:
                     </Text>
