@@ -338,24 +338,28 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
 
         <View style={postStyles.actionsRow}>
           <TouchableOpacity
-            onPress={() => toggleLike(item.id)}
-            onLongPress={() => {
-              setActivePostId(item.id);
-              setShowEmojiPopup(true);
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Icon
-                name={userReacted ? 'thumbs-up' : 'thumbs-up-outline'}
-                size={18}
-                color={userReacted ? '#007AFF' : mergedTheme.text}
-                style={{ marginRight: 4 }}
-              />
-              <Text style={postStyles.actionText}>
-                {userReacted ? 'Unlike' : 'Like'}
-              </Text>
-            </View>
-          </TouchableOpacity>
+  onPress={() => {
+    if (userReacted) {
+      toggleLike(item.id);
+    } else {
+      setActivePostId(item.id);
+      setShowEmojiPopup(true);
+    }
+  }}
+>
+  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+    <Icon
+      name={userReacted ? 'thumbs-up' : 'thumbs-up-outline'}
+      size={18}
+      color={userReacted ? '#007AFF' : mergedTheme.text}
+      style={{ marginRight: 4 }}
+    />
+    <Text style={postStyles.actionText}>
+      {userReacted ? 'Reacted' : 'React'}
+    </Text>
+  </View>
+</TouchableOpacity>
+
 
           <TouchableOpacity
             onPress={() => {
