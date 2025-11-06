@@ -161,17 +161,13 @@ export default function App() {
               {props => <MainTabs {...props} setLoggedIn={setLoggedIn} />}
             </Stack.Screen>
 
+            {/* ✅ Allow viewing other users' profiles */}
+            <Stack.Screen name="ProfileView" component={Profile} />
+
             {/* ✅ Other modal screens */}
-            <Stack.Screen
-              name="CreatePost"
-              component={CreatePost}
-              options={{ presentation: 'modal' }}
-            />
-            <Stack.Screen
-              name="Comments"
-              component={Comments}
-              options={{ presentation: 'modal' }}
-            />
+            <Stack.Screen name="CreatePost" component={CreatePost} options={{ presentation: 'modal' }} />
+            <Stack.Screen name="Comments" component={Comments} options={{ presentation: 'modal' }} />
+
             <Stack.Screen name="ChangeEmail" component={ChangeEmail} />
             <Stack.Screen name="ChangePassword" component={ChangePassword} />
             <Stack.Screen name="ChangeUsername" component={ChangeUsername} />
