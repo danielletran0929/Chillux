@@ -394,7 +394,7 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
         {showInput && (
           <View style={postStyles.commentInputRow}>
             <TextInput
-              style={postStyles.commentInput}
+              style={postStyles.commentText}
               placeholder="Write a comment..."
               value={commentText}
               onChangeText={setCommentText}
