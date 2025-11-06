@@ -394,7 +394,7 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
         {showInput && (
           <View style={postStyles.commentInputRow}>
             <TextInput
-              style={postStyles.commentText}
+              style={postStyles.commentInput}
               placeholder="Write a comment..."
               value={commentText}
               onChangeText={setCommentText}
@@ -605,9 +605,6 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
                   style={styles.headerProfilePic}
                 />
                 <Text style={styles.commentText}>{currentUser?.username || 'User'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
-                <Icon name="settings-outline" size={28} color={styles.usernameHeader.color} />
               </TouchableOpacity>
             </View>
           </View>
