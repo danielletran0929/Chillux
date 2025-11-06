@@ -292,18 +292,49 @@ export default function NewsFeed({ navigation, setLoggedIn }) {
 
         {item.text ? <Text style={postStyles.postText}>{item.text}</Text> : null}
 
-        {item.images?.length > 0 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            scrollEnabled={item.images.length > 1}
-            style={postStyles.imageContainer}
-          >
-            {item.images.map((uri, idx) => (
-              <Image key={idx} source={{ uri }} style={postStyles.inlinePostImage} />
-            ))}
-          </ScrollView>
-        )}
+        {/* IMAGE HANDLING */}
+{item.images?.length > 0 && (
+  item.text?.trim()
+    ? (
+      // Normal image layout when text exists
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        scrollEnabled={item.images.length > 1}
+        style={postStyles.imageContainer}
+      >
+        {item.images.map((uri, idx) => (
+          <Image
+            key={idx}
+            source={{ uri }}
+            style={[
+              postStyles.inlinePostImage,
+              { borderRadius: 10, marginRight: 8 },
+            ]}
+          />
+        ))}
+      </ScrollView>
+    )
+    : (
+      // BIG layout for image-only posts
+      <View style={{ width: '100%', marginTop: 6 }}>
+        {item.images.map((uri, idx) => (
+          <Image
+            key={idx}
+            source={{ uri }}
+            style={{
+              width: '100%',
+              aspectRatio: 1,
+              borderRadius: 14,
+              marginBottom: item.images.length > 1 ? 10 : 0,
+              resizeMode: 'cover',
+            }}
+          />
+        ))}
+      </View>
+    )
+)}
+
 
         <View style={postStyles.actionsRow}>
           <TouchableOpacity
