@@ -1,15 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  FlatList,
-  Keyboard,
-  TouchableWithoutFeedback,
-  Alert,
-  SafeAreaView,
-  StyleSheet,
+  View, Text, Image, TouchableOpacity, FlatList, Keyboard,
+  TouchableWithoutFeedback, Alert, SafeAreaView, StyleSheet,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -18,8 +10,8 @@ import createStyles from '../styles/profileStyles';
 import PostCard from '../components/PostCard';
 import Icon from 'react-native-vector-icons/Ionicons';
 
-export default function Profile({ navigation, route }) {
-  const { userId } = route.params;
+export default function Profile({ navigation, route, fromTab }) {
+  const [userId, setUserId] = useState(null);
   const [user, setUser] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [posts, setPosts] = useState([]);
@@ -31,9 +23,29 @@ export default function Profile({ navigation, route }) {
   const [emojiOptions, setEmojiOptions] = useState([]);
   const [activeCommentPostId, setActiveCommentPostId] = useState(null);
   const [commentText, setCommentText] = useState('');
-  const [hasPendingRequest, setHasPendingRequest] = useState(false); // NEW: pending request state
+  const [hasPendingRequest, setHasPendingRequest] = useState(false);
 
   const defaultEmojis = ['👍', '😂', '🔥', '❤️', '😮'];
+
+  // ✅ LOAD CORRECT PROFILE ID
+  useEffect(() => {
+    const loadProfileTarget = async () => {
+      const storedUser = await AsyncStorage.getItem('currentUser');
+      const parsed = storedUser ? JSON.parse(storedUser) : null;
+      const myId = parsed?.id;
+
+      // ✅ If opened from tab, show your own profile
+      // ✅ If navigated with params, show that user's profile
+      const targetId = fromTab ? myId : route?.params?.userId || myId;
+
+      setUserId(targetId);
+      setCurrentUser(parsed);
+      setIsOwnProfile(targetId === myId);
+    };
+
+    loadProfileTarget();
+  }, [route, fromTab]);
+
   const styles = createStyles(user?.theme || {});
 
   const allEmojis = useMemo(() => {
